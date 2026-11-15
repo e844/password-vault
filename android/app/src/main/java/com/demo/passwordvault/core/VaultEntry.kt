@@ -11,6 +11,7 @@ data class VaultEntry(
     val password: String = "",
     val url: String = "",
     val notes: String = "",
+    val category: String = Categories.DEFAULT,
     val updatedAt: Long = System.currentTimeMillis(),
 ) {
     /** לא מדפיסים את הסיסמה גם אם מישהו בטעות קורא toString(). */
@@ -44,4 +45,36 @@ object VaultOps {
     }
 
     fun delete(entries: List<VaultEntry>, id: String): List<VaultEntry> = entries.filterNot { it.id == id }
+
+    data class MergeResult(val entries: List<VaultEntry>, val added: Int, val updated: Int)
+    data class ImportResult(val entries: List<VaultEntry>, val added: Int, val duplicates: Int)
+
+    /** מיזוג מגיבוי: id חדש נוסף; id קיים מתעדכן רק אם בגיבוי הוא חדש יותר. */
+    fun merge(current: List<VaultEntry>, incoming: List<VaultEntry>): MergeResult {
+        val map = LinkedHashMap<String, VaultEntry>()
+        current.forEach { map[it.id] = it }
+        var added = 0
+        var updated = 0
+        for (e in incoming) {
+            val old = map[e.id]
+            if (old == null) { map[e.id] = e; added++ } else if (e.updatedAt > old.updatedAt) { map[e.id] = e; updated++ }
+        }
+        return MergeResult(map.values.toList(), added, updated)
+    }
+
+    /** ייבוא רשומות חדשות (מ-CSV), בלי כפולות (אותה כתובת, משתמש וסיסמה). */
+    fun import(current: List<VaultEntry>, incoming: List<VaultEntry>, now: Long = System.currentTimeMillis()): ImportResult {
+        fun key(e: VaultEntry) = e.url.lowercase(Locale.ROOT) + "\u0000" + e.username + "\u0000" + e.password
+        val seen = current.map(::key).toHashSet()
+        val out = current.toMutableList()
+        var added = 0
+        var duplicates = 0
+        for (raw in incoming) {
+            val e = raw.copy(id = UUID.randomUUID().toString(), title = raw.title.ifBlank { "ללא שם" }, updatedAt = now)
+            if (!seen.add(key(e))) { duplicates++; continue }
+            out += e
+            added++
+        }
+        return ImportResult(out, added, duplicates)
+    }
 }

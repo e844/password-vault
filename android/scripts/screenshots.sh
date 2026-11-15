@@ -20,7 +20,7 @@ if m:
     print((a[0] + a[2]) // 2, (a[1] + a[3]) // 2)
 PY
 )
-  if [ -n "$c" ]; then echo "  (dismissing system ANR dialog)"; adb shell input tap $c; sleep 2; return 0; fi
+  if [ -n "$c" ]; then echo "  (dismissing system ANR dialog)" >&2; adb shell input tap $c; sleep 2; return 0; fi
   return 1
 }
 
@@ -91,8 +91,15 @@ type_in master "$MASTER"
 type_in confirm "$MASTER"
 shot android-1-setup
 tap submit
-expect_text "5 רשומות" "vault created with 5 sample entries"
+expect_text "7 רשומות" "vault created with 7 sample entries"
 shot android-2-list
+
+echo "== categories =="
+tap cat_banking
+expect_text "רשומה אחת" "category filter shows one banking entry"
+shot android-2b-category
+tap cat_all
+expect_text "7 רשומות" "back to all entries"
 
 echo "== detail =="
 tap entry 1
@@ -106,6 +113,7 @@ echo "== add entry =="
 tap fab
 type_in e_title "Demo Server"
 type_in e_username "admin@example.com"
+tap e_cat_work
 tap e_generate
 expect_text "השתמש בסיסמה" "generator dialog shown"
 shot android-4-generator
@@ -115,7 +123,16 @@ shot android-5-edit
 tap save
 expect_text "Demo Server" "entry saved"
 tap back
-expect_text "6 רשומות" "list has 6 entries"
+expect_text "8 רשומות" "list has 8 entries"
+
+echo "== auto-lock setting =="
+tap menu
+shot android-10-menu
+tap menu_autolock
+expect_text "אחרי 15 דקות" "auto-lock dialog shows choices"
+tap lock_60
+tap lock_save
+expect_text "שעה" "auto-lock saved"
 
 echo "== search =="
 type_in search "bank"
@@ -138,7 +155,7 @@ adb shell am start -W -n "$PKG/com.demo.passwordvault.MainActivity"
 expect_text "הכספת נעולה" "starts locked after restart"
 type_in master "$MASTER"
 tap submit
-expect_text "6 רשומות" "data persisted (6 entries)"
+expect_text "8 רשומות" "data persisted (8 entries)"
 shot android-8-dark-list
 tap entry 0
 tap reveal
@@ -147,7 +164,7 @@ shot android-9-dark-detail
 echo "== delete =="
 tap delete
 tap confirm_delete
-expect_text "5 רשומות" "entry deleted"
+expect_text "7 רשומות" "entry deleted"
 
 adb shell cmd uimode night no
 echo "ALL ANDROID UI CHECKS PASSED"

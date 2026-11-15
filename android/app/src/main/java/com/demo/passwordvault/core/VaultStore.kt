@@ -44,39 +44,68 @@ class VaultStore(
     /** פותח כספת קיימת. המערך password מאופס בסיום. */
     fun unlock(password: CharArray): VaultSession {
         try {
-            val data = file.readBytes()
-            val headerLen = MAGIC.size + 1 + 4 + VaultCrypto.SALT_LENGTH + VaultCrypto.IV_LENGTH
-            if (data.size < headerLen + 16) throw CorruptVaultException("file too short")
-            if (!data.copyOfRange(0, MAGIC.size).contentEquals(MAGIC)) throw CorruptVaultException("bad magic")
-            var p = MAGIC.size
-            val version = data[p++].toInt()
-            if (version != FILE_VERSION.toInt()) throw CorruptVaultException("unsupported version")
-            val iters = ((data[p].toInt() and 0xff) shl 24) or ((data[p + 1].toInt() and 0xff) shl 16) or
-                ((data[p + 2].toInt() and 0xff) shl 8) or (data[p + 3].toInt() and 0xff)
-            p += 4
-            if (iters <= 0 || iters > 10_000_000) throw CorruptVaultException("bad iterations")
-            val salt = data.copyOfRange(p, p + VaultCrypto.SALT_LENGTH); p += VaultCrypto.SALT_LENGTH
-            val iv = data.copyOfRange(p, p + VaultCrypto.IV_LENGTH); p += VaultCrypto.IV_LENGTH
-            val header = data.copyOfRange(0, p)
-            val ciphertext = data.copyOfRange(p, data.size)
-
-            val key = VaultCrypto.deriveKey(password, salt, iters)
-            val plain = try {
-                VaultCrypto.decrypt(key, iv, ciphertext, header)
-            } catch (e: AEADBadTagException) {
-                key.fill(0)
-                throw WrongPasswordException()
-            }
-            val entries = try {
-                VaultCodec.decode(plain)
-            } finally {
-                plain.fill(0)
-            }
-            return VaultSession(this, key, salt, iters, entries)
+            val d = decrypt(file.readBytes(), password)
+            return VaultSession(this, d.key, d.salt, d.iterations, d.entries)
         } finally {
             password.fill('\u0000')
         }
     }
+
+    /** הבייטים של קובץ הכספת כמו שהם (מוצפנים) – לגיבוי. */
+    fun encryptedBytes(): ByteArray = file.readBytes()
+
+    private class Decrypted(val key: ByteArray, val salt: ByteArray, val iterations: Int, val entries: List<VaultEntry>)
+
+    private fun decrypt(data: ByteArray, password: CharArray): Decrypted {
+        val headerLen = MAGIC.size + 1 + 4 + VaultCrypto.SALT_LENGTH + VaultCrypto.IV_LENGTH
+        if (data.size < headerLen + 16) throw CorruptVaultException("file too short")
+        if (!data.copyOfRange(0, MAGIC.size).contentEquals(MAGIC)) throw CorruptVaultException("bad magic")
+        var p = MAGIC.size
+        val version = data[p++].toInt()
+        if (version != FILE_VERSION.toInt()) throw CorruptVaultException("unsupported version")
+        val iters = ((data[p].toInt() and 0xff) shl 24) or ((data[p + 1].toInt() and 0xff) shl 16) or
+            ((data[p + 2].toInt() and 0xff) shl 8) or (data[p + 3].toInt() and 0xff)
+        p += 4
+        if (iters <= 0 || iters > 10_000_000) throw CorruptVaultException("bad iterations")
+        val salt = data.copyOfRange(p, p + VaultCrypto.SALT_LENGTH); p += VaultCrypto.SALT_LENGTH
+        val iv = data.copyOfRange(p, p + VaultCrypto.IV_LENGTH); p += VaultCrypto.IV_LENGTH
+        val header = data.copyOfRange(0, p)
+        val ciphertext = data.copyOfRange(p, data.size)
+
+        val key = VaultCrypto.deriveKey(password, salt, iters)
+        val plain = try {
+            VaultCrypto.decrypt(key, iv, ciphertext, header)
+        } catch (e: AEADBadTagException) {
+            key.fill(0)
+            throw WrongPasswordException()
+        }
+        try {
+            return Decrypted(key, salt, iters, VaultCodec.decode(plain))
+        } catch (e: Exception) {
+            key.fill(0)
+            throw e
+        } finally {
+            plain.fill(0)
+        }
+    }
+
+    /** חדש מגיבוי: מפענח קובץ גיבוי (אותו פורמט) עם הסיסמה שלו. לא משנה את הכספת. */
+    fun readBackup(data: ByteArray, password: CharArray): List<VaultEntry> {
+        try {
+            val d = decrypt(data, password)
+            d.key.fill(0)
+            return d.entries
+        } finally {
+            password.fill('\u0000')
+        }
+    }
+
+    internal fun newKey(password: CharArray): Pair<ByteArray, ByteArray> {
+        val salt = ByteArray(VaultCrypto.SALT_LENGTH).also(random::nextBytes)
+        return VaultCrypto.deriveKey(password, salt, iterations) to salt
+    }
+
+    internal val defaultIterations: Int get() = iterations
 
     internal fun write(key: ByteArray, salt: ByteArray, iters: Int, entries: List<VaultEntry>) {
         val iv = ByteArray(VaultCrypto.IV_LENGTH).also(random::nextBytes) // IV חדש בכל שמירה
@@ -115,9 +144,9 @@ class VaultStore(
 /** כספת פתוחה. המפתח נמצא רק בזיכרון, ונמחק בנעילה. */
 class VaultSession internal constructor(
     private val store: VaultStore,
-    private val key: ByteArray,
-    private val salt: ByteArray,
-    private val iterations: Int,
+    private var key: ByteArray,
+    private var salt: ByteArray,
+    private var iterations: Int,
     initialEntries: List<VaultEntry>,
 ) {
     var entries: List<VaultEntry> = initialEntries
@@ -130,6 +159,21 @@ class VaultSession internal constructor(
         check(!isLocked) { "vault is locked" }
         store.write(key, salt, iterations, newEntries)
         entries = newEntries
+    }
+
+    /** החלפת סיסמת מאסטר: מלח חדש, מפתח חדש, הצפנה מחדש. המערך newPassword מאופס. */
+    fun changePassword(newPassword: CharArray) {
+        check(!isLocked) { "vault is locked" }
+        try {
+            val (newKey, newSalt) = store.newKey(newPassword)
+            store.write(newKey, newSalt, store.defaultIterations, entries)
+            key.fill(0)
+            key = newKey
+            salt = newSalt
+            iterations = store.defaultIterations
+        } finally {
+            newPassword.fill('\u0000')
+        }
     }
 
     fun lock() {

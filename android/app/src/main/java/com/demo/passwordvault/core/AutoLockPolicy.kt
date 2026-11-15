@@ -6,9 +6,23 @@ package com.demo.passwordvault.core
  *  - אחרי [backgroundGraceMillis] מרגע שהאפליקציה עברה לרקע
  */
 class AutoLockPolicy(
-    val inactivityMillis: Long = 2 * 60_000L,
-    val backgroundGraceMillis: Long = 30_000L,
+    var inactivityMillis: Long = 15 * 60_000L,
+    var backgroundGraceMillis: Long = 15 * 60_000L,
 ) {
+    companion object {
+        /** אפשרויות בדקות; 0 = רק כשהטלפון ננעל / האפליקציה נסגרת. */
+        val CHOICES_MINUTES = listOf(1, 5, 15, 30, 60, 0)
+        const val DEFAULT_MINUTES = 15
+
+        fun minutesToMillis(m: Int): Long = if (m > 0) m * 60_000L else Long.MAX_VALUE
+    }
+
+    fun setMinutes(minutes: Int) {
+        val ms = minutesToMillis(minutes)
+        inactivityMillis = ms
+        backgroundGraceMillis = ms
+    }
+
     private var lastInteraction = 0L
     private var backgroundedAt: Long? = null
 

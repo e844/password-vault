@@ -1,9 +1,35 @@
-@file:OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
+@file:OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class, ExperimentalLayoutApi::class)
 
 package com.demo.passwordvault.ui
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.Crossfade
+import android.content.ActivityNotFoundException
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.RadioButton
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import com.demo.passwordvault.core.Categories
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -114,7 +140,13 @@ fun VaultApp(vm: VaultViewModel) {
     }
     // testTag-ים חשופים כ-resource-id לבדיקות אוטומטיות וצילומי מסך
     Box(Modifier.fillMaxSize().semantics { testTagsAsResourceId = true }) {
-    Crossfade(targetState = vm.screen, label = "screen") { s ->
+    AnimatedContent(
+        targetState = vm.screen,
+        transitionSpec = {
+            (fadeIn(tween(260)) + scaleIn(tween(260), initialScale = 0.96f)) togetherWith fadeOut(tween(160))
+        },
+        label = "screen",
+    ) { s ->
         when (s) {
             Screen.Setup -> LockScreen(vm, setup = true, snackbar = snackbar)
             Screen.Locked -> LockScreen(vm, setup = false, snackbar = snackbar)
@@ -124,6 +156,7 @@ fun VaultApp(vm: VaultViewModel) {
             Screen.Generator -> GeneratorScreen(vm, snackbar)
         }
     }
+    VaultDialogs(vm)
     }
 }
 
@@ -251,6 +284,13 @@ private fun LockScreen(vm: VaultViewModel, setup: Boolean, snackbar: SnackbarHos
 @Composable
 private fun HomeScreen(vm: VaultViewModel, snackbar: SnackbarHostState) {
     val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    var menuOpen by remember { mutableStateOf(false) }
+
+    // חלונות הקבצים של אנדרואיד (Storage Access Framework) – בלי הרשאות אחסון
+    val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let(vm::importCsv) }
+    val backupLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { uri -> uri?.let(vm::backup) }
+    val restoreLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let(vm::pickRestore) }
+
     Scaffold(
         modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
         topBar = {
@@ -258,6 +298,24 @@ private fun HomeScreen(vm: VaultViewModel, snackbar: SnackbarHostState) {
                 title = { Text(Txt.APP_NAME) },
                 actions = {
                     IconButton(onClick = { vm.lock() }, modifier = Modifier.testTag("lock")) { Icon(Icons.Filled.Lock, contentDescription = Txt.LOCK) }
+                    Box {
+                        IconButton(onClick = { menuOpen = true }, modifier = Modifier.testTag("menu")) {
+                            Icon(Icons.Filled.MoreVert, contentDescription = Txt.MORE)
+                        }
+                        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                            MenuRow(Txt.MENU_IMPORT, AppIcons.Upload, "menu_import") {
+                                menuOpen = false
+                                importLauncher.launch(arrayOf("text/csv", "text/comma-separated-values", "text/plain", "application/csv", "*/*"))
+                            }
+                            MenuRow(Txt.MENU_EXPORT, AppIcons.Download, "menu_export") { menuOpen = false; vm.showDialog(VaultDialog.ExportWarning) }
+                            HorizontalDivider()
+                            MenuRow(Txt.MENU_BACKUP, AppIcons.Save, "menu_backup") { menuOpen = false; backupLauncher.launch(vm.backupFileName()) }
+                            MenuRow(Txt.MENU_RESTORE, AppIcons.Restore, "menu_restore") { menuOpen = false; restoreLauncher.launch(arrayOf("*/*")) }
+                            HorizontalDivider()
+                            MenuRow(Txt.MENU_AUTOLOCK, AppIcons.Timer, "menu_autolock") { menuOpen = false; vm.showDialog(VaultDialog.LockSettings) }
+                            MenuRow(Txt.MENU_CHANGE_MASTER, AppIcons.Key, "menu_master") { menuOpen = false; vm.showDialog(VaultDialog.ChangeMaster) }
+                        }
+                    }
                 },
                 scrollBehavior = scroll,
             )
@@ -277,7 +335,7 @@ private fun HomeScreen(vm: VaultViewModel, snackbar: SnackbarHostState) {
             contentPadding = padding,
             modifier = Modifier.fillMaxSize(),
         ) {
-            item {
+            item(key = "search") {
                 TextField(
                     value = vm.query,
                     onValueChange = { vm.query = it },
@@ -297,7 +355,34 @@ private fun HomeScreen(vm: VaultViewModel, snackbar: SnackbarHostState) {
                     ),
                 )
             }
-            item {
+            item(key = "cats") {
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    item {
+                        FilterChip(
+                            selected = vm.activeCategory == "all",
+                            onClick = { vm.activeCategory = "all" },
+                            label = { Text("${Txt.ALL} ${vm.entries.size}") },
+                            leadingIcon = { Icon(AppIcons.All, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                            modifier = Modifier.testTag("cat_all"),
+                        )
+                    }
+                    items(Categories.KEYS.filter { vm.categoryCount(it) > 0 || vm.activeCategory == it }) { key ->
+                        FilterChip(
+                            selected = vm.activeCategory == key,
+                            onClick = { vm.activeCategory = key },
+                            label = { Text("${Txt.categoryLabel(key)} ${vm.categoryCount(key)}") },
+                            leadingIcon = {
+                                Icon(AppIcons.category(key), contentDescription = null, modifier = Modifier.size(18.dp), tint = categoryAccent(key))
+                            },
+                            modifier = Modifier.testTag("cat_$key"),
+                        )
+                    }
+                }
+            }
+            item(key = "meta") {
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -319,53 +404,91 @@ private fun HomeScreen(vm: VaultViewModel, snackbar: SnackbarHostState) {
                 }
             }
             if (list.isEmpty()) {
-                item {
+                item(key = "empty") {
                     Text(
-                        if (vm.query.isBlank()) Txt.EMPTY_LIST else Txt.NO_RESULTS,
+                        when {
+                            vm.query.isNotBlank() -> Txt.NO_RESULTS
+                            vm.activeCategory != "all" -> Txt.EMPTY_CATEGORY
+                            else -> Txt.EMPTY_LIST
+                        },
                         modifier = Modifier.fillMaxWidth().padding(48.dp),
                         textAlign = TextAlign.Center,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
-            items(list, key = { it.id }) { e -> EntryRow(e) { vm.openDetail(e.id) } }
-            item { Spacer(Modifier.height(96.dp)) }
+            items(list, key = { it.id }) { e ->
+                EntryRow(e, Modifier.animateItem()) { vm.openDetail(e.id) }
+            }
+            item(key = "bottom") { Spacer(Modifier.height(96.dp)) }
         }
     }
 }
 
 @Composable
-private fun EntryRow(e: VaultEntry, onClick: () -> Unit) {
+private fun MenuRow(text: String, icon: ImageVector, tag: String, onClick: () -> Unit) {
+    DropdownMenuItem(
+        text = { Text(text) },
+        onClick = onClick,
+        leadingIcon = { Icon(icon, contentDescription = null) },
+        modifier = Modifier.testTag(tag),
+    )
+}
+
+/** צבע לכל קטגוריה, מותאם למצב בהיר/כהה. */
+@Composable
+private fun categoryAccent(key: String): Color {
+    val dark = isSystemInDarkTheme()
+    return Color.hsl(AppIcons.categoryHue(key), if (dark) 0.65f else 0.55f, if (dark) 0.72f else 0.42f)
+}
+
+@Composable
+private fun categoryContainer(key: String): Pair<Color, Color> {
+    val h = AppIcons.categoryHue(key)
+    return if (isSystemInDarkTheme()) {
+        Color.hsl(h, 0.35f, 0.30f) to Color.hsl(h, 0.70f, 0.88f)
+    } else {
+        Color.hsl(h, 0.70f, 0.88f) to Color.hsl(h, 0.60f, 0.20f)
+    }
+}
+
+@Composable
+private fun EntryRow(e: VaultEntry, modifier: Modifier = Modifier, onClick: () -> Unit) {
     Card(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).testTag("entry"),
+        modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).testTag("entry"),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
     ) {
         ListItem(
             headlineContent = { Text(e.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-            supportingContent = if (e.username.isNotEmpty()) {
-                { Text(e.username, maxLines = 1, overflow = TextOverflow.Ellipsis) }
-            } else null,
-            leadingContent = { Avatar(e.title) },
+            supportingContent = { Text(e.username.ifEmpty { Txt.categoryLabel(e.category) }, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+            leadingContent = { Avatar(e.title, e.category) },
             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
         )
     }
 }
 
+private fun initialOf(title: String): String {
+    val parts = title.split(Regex("\\s[–-]\\s"))
+    val name = (if (parts.size > 1) parts.last() else parts.first()).trim()
+    return name.take(1).uppercase().ifEmpty { "?" }
+}
+
 @Composable
-private fun Avatar(title: String) {
+private fun Avatar(title: String, category: String, size: Int = 44) {
+    val (bg, fg) = categoryContainer(category)
     Box(
         modifier = Modifier
-            .size(44.dp)
+            .size(size.dp)
             .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.primaryContainer),
+            .background(bg),
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            title.trim().take(1).ifEmpty { "?" },
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onPrimaryContainer,
+            initialOf(title),
+            style = if (size > 44) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.titleMedium,
+            color = fg,
         )
     }
 }
@@ -376,6 +499,7 @@ private fun Avatar(title: String) {
 private fun DetailScreen(vm: VaultViewModel, id: String, snackbar: SnackbarHostState) {
     BackHandler { vm.back() }
     val e = vm.entry(id) ?: return
+    val context = LocalContext.current
     var showPassword by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
 
@@ -404,6 +528,17 @@ private fun DetailScreen(vm: VaultViewModel, id: String, snackbar: SnackbarHostS
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                Avatar(e.title, e.category, size = 56)
+                val (bg, fg) = categoryContainer(e.category)
+                Surface(shape = RoundedCornerShape(8.dp), color = bg, contentColor = fg) {
+                    Row(Modifier.padding(horizontal = 10.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(AppIcons.category(e.category), contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(Txt.categoryLabel(e.category), style = MaterialTheme.typography.labelLarge)
+                    }
+                }
+            }
             FieldCard(Txt.USERNAME, e.username, ltr = true) {
                 TextButton(onClick = { vm.copyToClipboard(Txt.USERNAME, e.username) }) { Text(Txt.COPY) }
             }
@@ -418,7 +553,13 @@ private fun DetailScreen(vm: VaultViewModel, id: String, snackbar: SnackbarHostS
                 TextButton(onClick = { vm.copyToClipboard(Txt.PASSWORD, e.password) }) { Text(Txt.COPY) }
             }
             if (e.password.isNotEmpty()) StrengthMeter(e.password)
-            FieldCard(Txt.URL, e.url, ltr = true)
+            FieldCard(Txt.URL, e.url, ltr = true) {
+                TextButton(onClick = { openInBrowser(context, e.url) { vm.message = it } }, modifier = Modifier.testTag("open_url")) {
+                    Icon(AppIcons.OpenInNew, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(Txt.OPEN_IN_BROWSER)
+                }
+            }
             FieldCard(Txt.NOTES, e.notes)
             Text(
                 Txt.updated(
@@ -525,6 +666,18 @@ private fun EditScreen(vm: VaultViewModel, id: String?, snackbar: SnackbarHostSt
                 shape = RoundedCornerShape(16.dp),
                 modifier = Modifier.fillMaxWidth().testTag("e_title"),
             )
+            Text(Txt.CATEGORY, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Categories.KEYS.forEach { key ->
+                    FilterChip(
+                        selected = d.category == key,
+                        onClick = { vm.draft = vm.draft?.copy(category = key) },
+                        label = { Text(Txt.categoryLabel(key)) },
+                        leadingIcon = { Icon(AppIcons.category(key), contentDescription = null, modifier = Modifier.size(18.dp), tint = categoryAccent(key)) },
+                        modifier = Modifier.testTag("e_cat_$key"),
+                    )
+                }
+            }
             OutlinedTextField(
                 value = d.username,
                 onValueChange = { v -> vm.draft = vm.draft?.copy(username = v) },
@@ -736,5 +889,134 @@ private fun StrengthMeter(password: String) {
             trackColor = MaterialTheme.colorScheme.surfaceVariant,
         )
         Text(label, style = MaterialTheme.typography.labelMedium, color = color)
+    }
+}
+
+// ======================= פתיחת אתר בדפדפן =======================
+
+/** פותח את הכתובת בדפדפן של הטלפון. האפליקציה עצמה לא מתחברת לאינטרנט. */
+private fun openInBrowser(context: Context, raw: String, onError: (String) -> Unit) {
+    val trimmed = raw.trim()
+    val withScheme = if (Regex("^[a-zA-Z][a-zA-Z0-9+.-]*://").containsMatchIn(trimmed)) trimmed else "https://$trimmed"
+    val uri = Uri.parse(withScheme)
+    if (uri.scheme != "https" && uri.scheme != "http") {
+        onError(Txt.NO_BROWSER)
+        return
+    }
+    try {
+        context.startActivity(Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    } catch (e: ActivityNotFoundException) {
+        onError(Txt.NO_BROWSER)
+    }
+}
+
+// ======================= חלונות: ייצוא, שחזור, סיסמת מאסטר, נעילה =======================
+
+@Composable
+private fun VaultDialogs(vm: VaultViewModel) {
+    val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri -> uri?.let(vm::exportCsv) }
+    when (vm.dialog) {
+        VaultDialog.ExportWarning -> AlertDialog(
+            onDismissRequest = { vm.dismissDialog() },
+            icon = { Icon(AppIcons.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+            title = { Text(Txt.EXPORT_TITLE) },
+            text = { Text(Txt.EXPORT_BODY) },
+            confirmButton = {
+                TextButton(onClick = { vm.dismissDialog(); exportLauncher.launch(vm.csvFileName()) }, modifier = Modifier.testTag("export_confirm")) {
+                    Text(Txt.EXPORT, color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = { TextButton(onClick = { vm.dismissDialog() }) { Text(Txt.CANCEL) } },
+        )
+
+        VaultDialog.Restore -> {
+            var pw by remember { mutableStateOf("") }
+            var visible by remember { mutableStateOf(false) }
+            AlertDialog(
+                onDismissRequest = { if (!vm.busy) vm.dismissDialog() },
+                icon = { Icon(AppIcons.Restore, contentDescription = null) },
+                title = { Text(Txt.RESTORE_TITLE) },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text(Txt.RESTORE_BODY, style = MaterialTheme.typography.bodyMedium)
+                        SecretField(pw, { pw = it }, Txt.RESTORE_PASSWORD, visible, { visible = !visible },
+                            imeAction = ImeAction.Done, onDone = { vm.restore(pw) }, isError = vm.dialogError != null, tag = "restore_password")
+                        vm.dialogError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { vm.restore(pw) }, enabled = !vm.busy && pw.isNotEmpty(), modifier = Modifier.testTag("restore_ok")) {
+                        Text(if (vm.busy) Txt.WORKING else Txt.RESTORE)
+                    }
+                },
+                dismissButton = { TextButton(onClick = { vm.dismissDialog() }, enabled = !vm.busy) { Text(Txt.CANCEL) } },
+            )
+        }
+
+        VaultDialog.ChangeMaster -> {
+            var cur by remember { mutableStateOf("") }
+            var next by remember { mutableStateOf("") }
+            var confirm by remember { mutableStateOf("") }
+            var visible by remember { mutableStateOf(false) }
+            AlertDialog(
+                onDismissRequest = { if (!vm.busy) vm.dismissDialog() },
+                icon = { Icon(AppIcons.Key, contentDescription = null) },
+                title = { Text(Txt.MENU_CHANGE_MASTER) },
+                text = {
+                    Column(
+                        modifier = Modifier.verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        SecretField(cur, { cur = it }, Txt.CURRENT_PASSWORD, visible, { visible = !visible }, tag = "m_current")
+                        SecretField(next, { next = it }, Txt.NEW_PASSWORD, visible, { visible = !visible }, tag = "m_new")
+                        StrengthMeter(next)
+                        SecretField(confirm, { confirm = it }, Txt.CONFIRM_NEW_PASSWORD, visible, { visible = !visible },
+                            imeAction = ImeAction.Done, onDone = { vm.changeMaster(cur, next, confirm) }, tag = "m_confirm")
+                        Text(Txt.CHANGE_NOTE, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        vm.dialogError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { vm.changeMaster(cur, next, confirm) }, enabled = !vm.busy && cur.isNotEmpty() && next.isNotEmpty(), modifier = Modifier.testTag("m_ok")) {
+                        Text(if (vm.busy) Txt.WORKING else Txt.CHANGE)
+                    }
+                },
+                dismissButton = { TextButton(onClick = { vm.dismissDialog() }, enabled = !vm.busy) { Text(Txt.CANCEL) } },
+            )
+        }
+
+        VaultDialog.LockSettings -> {
+            var choice by remember { mutableStateOf(vm.autoLockMinutes) }
+            AlertDialog(
+                onDismissRequest = { vm.dismissDialog() },
+                icon = { Icon(AppIcons.Timer, contentDescription = null) },
+                title = { Text(Txt.MENU_AUTOLOCK) },
+                text = {
+                    Column {
+                        Text(Txt.AUTOLOCK_BODY, style = MaterialTheme.typography.bodyMedium)
+                        Spacer(Modifier.height(8.dp))
+                        com.demo.passwordvault.core.AutoLockPolicy.CHOICES_MINUTES.forEach { m ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .selectable(selected = choice == m, onClick = { choice = m }, role = Role.RadioButton)
+                                    .padding(vertical = 4.dp)
+                                    .testTag("lock_$m"),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                RadioButton(selected = choice == m, onClick = null)
+                                Spacer(Modifier.width(8.dp))
+                                Text(Txt.lockLabel(m))
+                            }
+                        }
+                    }
+                },
+                confirmButton = { TextButton(onClick = { vm.setAutoLock(choice) }, modifier = Modifier.testTag("lock_save")) { Text(Txt.SAVE) } },
+                dismissButton = { TextButton(onClick = { vm.dismissDialog() }) { Text(Txt.CANCEL) } },
+            )
+        }
+
+        null -> Unit
     }
 }
