@@ -53,7 +53,8 @@ jobs:
       - name: Unit tests
         run: npm test
       - name: Build number
-        run: echo "{\"build\": ${{ github.run_number }}}" > build-info.json
+        run: |
+          printf '{"build": %s}\n' "${{ github.run_number }}" > build-info.json
       - name: Package
         run: >
           npx @electron/packager . PasswordVault --platform=win32 --arch=x64
