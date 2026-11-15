@@ -80,7 +80,34 @@ tap() {
   fail "element '$1' not found"
 }
 
-type_in() { tap "$1"; sleep 0.5; adb shell input text "${2// /%s}"; sleep 0.7; hide_keyboard; }
+# מקליד ובודק שהטקסט באמת נכנס (אמולטור איטי לפעמים "מפספס" הקלדה)
+type_in() {
+  for attempt in 1 2 3; do
+    tap "$1"; sleep 0.8
+    adb shell input text "${2// /%s}"; sleep 1
+    if field_has_text "$1"; then hide_keyboard; return 0; fi
+    echo "  (retyping into $1)" >&2
+  done
+  fail "could not type into $1"
+}
+
+field_has_text() {
+  dump
+  python3 - "$1" <<'PY'
+import sys, xml.etree.ElementTree as ET
+x = open('/tmp/ui.raw', encoding='utf-8', errors='ignore').read()
+s, e = x.find('<?xml'), x.rfind('</hierarchy>')
+if s < 0 or e < 0: sys.exit(1)
+root = ET.fromstring(x[s:e + 12])
+for n in root.iter('node'):
+    if n.get('resource-id') == sys.argv[1]:
+        texts = [c.get('text') or '' for c in n.iter('node')] + [n.get('text') or '']
+        # שדה סיסמה מוצג כנקודות; שדה רגיל – הטקסט עצמו. מספיק שיש תוכן שאינו התווית
+        if any(t and t not in ('הצג', 'הסתר') and len(t) >= 3 and ('•' in t or any(ch.isascii() and ch.isalnum() for ch in t)) for t in texts):
+            sys.exit(0)
+sys.exit(1)
+PY
+}
 
 expect_text() {
   for _ in $(seq 1 40); do dump; grep -q "$1" /tmp/ui.raw && { echo "  ✓ $2"; return 0; }; sleep 1; done
@@ -98,7 +125,8 @@ adb shell settings put global window_animation_scale 0
 adb shell settings put global transition_animation_scale 0
 adb shell settings put global animator_duration_scale 0
 adb shell cmd uimode night no
-sleep 20 # לתת לאמולטור להתייצב אחרי האתחול
+adb shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS >/dev/null 2>&1 || true
+sleep 30 # לתת לאמולטור להתייצב אחרי האתחול
 adb install -r "$APK"
 adb shell am start -W -n "$PKG/com.demo.passwordvault.MainActivity"
 
