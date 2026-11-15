@@ -6,6 +6,9 @@ on:
     paths: ['android/**', '.github/workflows/screenshots.yml']
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   emulator:
     runs-on: ubuntu-latest
@@ -40,3 +43,13 @@ jobs:
         with:
           name: android-screenshots
           path: screenshots-out/
+      - name: Publish screenshots (release "android-screenshots")
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ls screenshots-out/*.png >/dev/null 2>&1 || exit 0
+          gh release view android-screenshots --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
+            gh release create android-screenshots --repo "$GITHUB_REPOSITORY" --prerelease --latest=false \
+              --title "צילומי מסך – אנדרואיד (נוצרים אוטומטית)" --notes "צילומי מסך מבדיקת הממשק על אמולטור. לא להורדה."
+          gh release upload android-screenshots screenshots-out/*.png --repo "$GITHUB_REPOSITORY" --clobber

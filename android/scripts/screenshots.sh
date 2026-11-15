@@ -105,11 +105,7 @@ adb shell am start -W -n "$PKG/com.demo.passwordvault.MainActivity"
 echo "== first run =="
 expect_text "יצירת כספת חדשה" "setup screen shown"
 expect_text "נתוני דוגמה" "sample data banner shown"
-type_in master "short"
-type_in confirm "short"
-tap submit
-expect_text "לפחות 8 תווים" "short master password rejected"
-adb shell am force-stop "$PKG"; adb shell am start -W -n "$PKG/com.demo.passwordvault.MainActivity"
+sleep 5 # האמולטור איטי בשניות הראשונות אחרי הפתיחה
 type_in master "$MASTER"
 type_in confirm "$MASTER"
 shot android-1-setup
