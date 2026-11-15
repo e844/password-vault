@@ -11,8 +11,8 @@ const tmpDir = () => fs.mkdtempSync(path.join(os.tmpdir(), 'pv-'));
 const pw = (s) => Buffer.from(s, 'utf8');
 const store = (dir) => new V.VaultStore(path.join(dir, 'vault.bin'), { iterations: 1000 });
 const sample = [
-  { id: 'a', title: 'דוגמה – מייל', username: 'a@example.com', password: 'S3cret!pass', url: 'https://example.com', notes: 'הערה', updatedAt: 1 },
-  { id: 'b', title: 'Bank demo', username: 'user', password: 'p@ss-אבג', url: '', notes: '', updatedAt: 2 },
+  { id: 'a', title: 'דוגמה – מייל', username: 'a@example.com', password: 'S3cret!pass', url: 'https://example.com', notes: 'הערה', category: 'email', updatedAt: 1 },
+  { id: 'b', title: 'Bank demo', username: 'user', password: 'p@ss-אבג', url: '', notes: '', category: 'banking', updatedAt: 2 },
 ];
 
 test('create then unlock round-trip', async () => {
@@ -189,8 +189,9 @@ test('unlock throttle', () => {
 
 test('sample data is fake', () => {
   const s = L.sampleEntries();
-  assert.equal(s.length, 5);
+  assert.equal(s.length, 7);
   assert.ok(s.every((e) => e.title.startsWith('דוגמה')));
+  assert.ok(s.every((e) => L.CATEGORY_KEYS.includes(e.category)));
   assert.ok(s.every((e) => !e.url || e.url.includes('example.com')));
 });
 

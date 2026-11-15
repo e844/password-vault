@@ -8,6 +8,7 @@
  * סיסמת המאסטר לא נשמרת בשום מקום, גם לא hash שלה.
  */
 const crypto = require('node:crypto');
+const { CATEGORY_KEYS } = require('./logic');
 const fs = require('node:fs');
 const path = require('node:path');
 
@@ -48,6 +49,7 @@ function normalizeEntry(e) {
     password: s(e.password),
     url: s(e.url),
     notes: s(e.notes),
+    category: CATEGORY_KEYS.includes(e.category) ? e.category : 'general',
     updatedAt: Number.isFinite(e.updatedAt) ? e.updatedAt : Date.now(),
   };
 }
@@ -158,6 +160,22 @@ class VaultSession {
     this.entries = newEntries;
   }
 
+  /** החלפת סיסמת מאסטר: מלח חדש, מפתח חדש, הצפנה מחדש. */
+  async changePassword(newPasswordBuf) {
+    if (this.locked) throw new Error('vault is locked');
+    try {
+      const salt = crypto.randomBytes(SALT_LENGTH);
+      const key = await deriveKey(newPasswordBuf, salt, this._store.iterations);
+      this._store._write(key, salt, this._store.iterations, this.entries);
+      this._key.fill(0);
+      this._key = key;
+      this._salt = salt;
+      this._iterations = this._store.iterations;
+    } finally {
+      newPasswordBuf.fill(0);
+    }
+  }
+
   lock() {
     this._key.fill(0);
     this.entries = [];
@@ -193,13 +211,54 @@ function searchEntries(entries, query) {
   return list.sort((a, b) => a.title.localeCompare(b.title, 'he'));
 }
 
+/**
+ * מיזוג רשומות מגיבוי: רשומה חדשה (id לא קיים) נוספת; רשומה קיימת מתעדכנת רק אם בגיבוי היא חדשה יותר.
+ */
+function mergeEntries(current, incoming) {
+  const map = new Map(current.map((e) => [e.id, e]));
+  let added = 0;
+  let updated = 0;
+  for (const raw of incoming) {
+    const e = normalizeEntry(raw);
+    const old = map.get(e.id);
+    if (!old) { map.set(e.id, e); added++; } else if (e.updatedAt > old.updatedAt) { map.set(e.id, e); updated++; }
+  }
+  return { entries: [...map.values()], added, updated };
+}
+
+/** ייבוא רשומות חדשות (מ-CSV) – מדלג על כפולות (אותה כתובת, משתמש וסיסמה). */
+function importEntries(current, incoming, now = Date.now()) {
+  const key = (e) => `${(e.url || '').toLowerCase()}\u0000${e.username}\u0000${e.password}`;
+  const seen = new Set(current.map(key));
+  const out = current.slice();
+  let added = 0;
+  let duplicates = 0;
+  for (const raw of incoming) {
+    const e = normalizeEntry({ ...raw, id: crypto.randomUUID(), updatedAt: now });
+    if (!e.title.trim()) e.title = 'ללא שם';
+    if (seen.has(key(e))) { duplicates++; continue; }
+    seen.add(key(e));
+    out.push(e);
+    added++;
+  }
+  return { entries: out, added, duplicates };
+}
+
+/** קורא קובץ גיבוי מוצפן (אותו פורמט כמו הכספת) עם הסיסמה שלו. */
+async function readBackup(file, passwordBuf) {
+  const session = await new VaultStore(file).unlock(passwordBuf);
+  const entries = session.entries;
+  session.lock();
+  return entries;
+}
+
 /** מה שנשלח לממשק ברשימה – בלי הסיסמה. */
 function summary(e) {
-  return { id: e.id, title: e.title, username: e.username, url: e.url, notes: e.notes, hasPassword: e.password.length > 0, updatedAt: e.updatedAt };
+  return { id: e.id, title: e.title, username: e.username, url: e.url, notes: e.notes, category: e.category, hasPassword: e.password.length > 0, updatedAt: e.updatedAt };
 }
 
 module.exports = {
   VaultStore, VaultSession, WrongPasswordError, CorruptVaultError,
-  addEntry, updateEntry, deleteEntry, searchEntries, summary,
+  addEntry, updateEntry, deleteEntry, searchEntries, summary, mergeEntries, importEntries, readBackup,
   DEFAULT_ITERATIONS,
 };

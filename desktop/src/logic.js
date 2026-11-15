@@ -54,7 +54,7 @@ function strengthOf(password) {
 
 // ---------- נעילה אוטומטית ----------
 class AutoLockPolicy {
-  constructor({ inactivityMs = 2 * 60_000, backgroundGraceMs = 30_000 } = {}) {
+  constructor({ inactivityMs = 15 * 60_000, backgroundGraceMs = 15 * 60_000 } = {}) {
     this.inactivityMs = inactivityMs;
     this.backgroundGraceMs = backgroundGraceMs;
     this.lastInteraction = 0;
@@ -91,19 +91,47 @@ class UnlockThrottle {
   onSuccess() { this.failures = 0; this.blockedUntil = 0; }
 }
 
+// ---------- קטגוריות ----------
+const CATEGORY_KEYS = ['general', 'banking', 'email', 'social', 'shopping', 'work', 'home', 'entertainment'];
+
+const CATEGORY_HINTS = {
+  banking: ['bank', 'בנק', 'paypal', 'pay', 'visa', 'mastercard', 'isracard', 'cal-online', 'max.co', 'leumi', 'hapoalim', 'discount', 'mizrahi', 'credit', 'אשראי', 'ביטוח', 'insurance', 'crypto', 'binance', 'coinbase'],
+  email: ['mail', 'דואר', 'outlook', 'gmail', 'yahoo', 'proton', 'walla'],
+  social: ['facebook', 'instagram', 'twitter', 'x.com', 'tiktok', 'linkedin', 'reddit', 'whatsapp', 'telegram', 'discord', 'snapchat', 'social', 'רשת חברתית'],
+  shopping: ['shop', 'store', 'amazon', 'aliexpress', 'ebay', 'קניות', 'חנות', 'ksp', 'ivory', 'shufersal', 'temu', 'shein'],
+  work: ['slack', 'jira', 'atlassian', 'github', 'gitlab', 'zoom', 'office', 'teams', 'work', 'עבודה', 'salesforce', 'notion', 'server', 'admin'],
+  home: ['wifi', 'wi-fi', 'router', 'בית', 'חשמל', 'electric', 'water', 'מים', 'ארנונה', 'gas', 'internet', 'bezeq', 'hot', 'partner', 'cellcom'],
+  entertainment: ['netflix', 'spotify', 'youtube', 'disney', 'steam', 'xbox', 'playstation', 'epic', 'twitch', 'apple music', 'game', 'משחק'],
+};
+
+/** ניחוש קטגוריה לפי שם וכתובת (לייבוא מדפדפן). */
+function guessCategory(title, url) {
+  const t = `${title || ''} ${url || ''}`.toLowerCase();
+  // מילים קצרות באנגלית חייבות להופיע כמילה שלמה (אחרת "netflix.com" נתפס כ-"x.com")
+  const has = (w) => (/^[a-z.\-]{1,5}$/.test(w)
+    ? new RegExp(`(^|[^a-z0-9])${w.replace(/[.\-]/g, '\\$&')}($|[^a-z0-9])`).test(t)
+    : t.includes(w));
+  for (const [cat, words] of Object.entries(CATEGORY_HINTS)) {
+    if (words.some(has)) return cat;
+  }
+  return 'general';
+}
+
 // ---------- נתוני דוגמה (חשבונות מומצאים ב-example.com) ----------
 function sampleEntries() {
   const pw = () => generatePassword({ length: 16 });
   return [
-    { title: 'דוגמה – דואר אלקטרוני', username: 'dana.demo@example.com', password: pw(), url: 'https://mail.example.com', notes: 'חשבון דוגמה' },
-    { title: 'דוגמה – בנק', username: 'demo-user-1234', password: pw(), url: 'https://bank.example.com', notes: 'לא חשבון אמיתי' },
-    { title: 'דוגמה – רשת חברתית', username: '@demo_user', password: pw(), url: 'https://social.example.com', notes: '' },
-    { title: 'דוגמה – חנות מקוונת', username: 'shopper@example.com', password: pw(), url: 'https://shop.example.com', notes: 'מספר לקוח: 000000' },
-    { title: 'דוגמה – Wi-Fi בבית', username: '', password: pw(), url: '', notes: 'שם רשת: Demo-WiFi' },
+    { title: 'דוגמה – דואר אלקטרוני', username: 'dana.demo@example.com', password: pw(), url: 'https://mail.example.com', notes: 'חשבון דוגמה', category: 'email' },
+    { title: 'דוגמה – בנק', username: 'demo-user-1234', password: pw(), url: 'https://bank.example.com', notes: 'לא חשבון אמיתי', category: 'banking' },
+    { title: 'דוגמה – רשת חברתית', username: '@demo_user', password: pw(), url: 'https://social.example.com', notes: '', category: 'social' },
+    { title: 'דוגמה – חנות מקוונת', username: 'shopper@example.com', password: pw(), url: 'https://shop.example.com', notes: 'מספר לקוח: 000000', category: 'shopping' },
+    { title: 'דוגמה – Wi-Fi בבית', username: '', password: pw(), url: '', notes: 'שם רשת: Demo-WiFi', category: 'home' },
+    { title: 'דוגמה – מערכת בעבודה', username: 'd.demo', password: pw(), url: 'https://work.example.com', notes: '', category: 'work' },
+    { title: 'דוגמה – סטרימינג', username: 'family@example.com', password: pw(), url: 'https://tv.example.com', notes: 'חשבון משפחתי', category: 'entertainment' },
   ].map((e) => ({ id: crypto.randomUUID(), updatedAt: Date.now(), ...e }));
 }
 
 module.exports = {
   generatePassword, strengthOf, charSets, DEFAULT_OPTIONS, MIN_LENGTH, MAX_LENGTH,
-  AutoLockPolicy, UnlockThrottle, sampleEntries,
+  AutoLockPolicy, UnlockThrottle, sampleEntries, CATEGORY_KEYS, guessCategory,
 };

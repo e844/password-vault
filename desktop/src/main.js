@@ -1,8 +1,10 @@
 'use strict';
-const { app, BrowserWindow, ipcMain, clipboard, powerMonitor, session, Menu, nativeTheme, systemPreferences } = require('electron');
+const { app, BrowserWindow, ipcMain, clipboard, powerMonitor, session, Menu, nativeTheme, systemPreferences, dialog, shell } = require('electron');
+const fs = require('node:fs');
 const path = require('node:path');
 const V = require('./vault');
 const L = require('./logic');
+const C = require('./csv');
 
 // מאפשר לבדיקות להשתמש בתיקיית נתונים נפרדת
 if (process.env.PV_USER_DATA) app.setPath('userData', process.env.PV_USER_DATA);
@@ -10,11 +12,17 @@ if (process.env.PV_USER_DATA) app.setPath('userData', process.env.PV_USER_DATA);
 if (!app.requestSingleInstanceLock()) app.quit();
 
 const store = new V.VaultStore(path.join(app.getPath('userData'), 'vault.bin'));
-// לבדיקות בלבד: אפשר רק לקצר את זמן הנעילה, לא להאריך
+const S = require('./settings');
+let settings = S.load(app.getPath('userData'));
+// לבדיקות בלבד: זמן נעילה קצר מאוד
 const testInactivity = Number(process.env.PV_TEST_INACTIVITY_MS);
-const policy = new L.AutoLockPolicy(
-  Number.isFinite(testInactivity) && testInactivity > 0 ? { inactivityMs: Math.min(testInactivity, 120_000) } : {},
-);
+const policy = new L.AutoLockPolicy();
+function applyLockSettings() {
+  const ms = Number.isFinite(testInactivity) && testInactivity > 0 ? testInactivity : S.minutesToMs(settings.autoLockMinutes);
+  policy.inactivityMs = ms;
+  policy.backgroundGraceMs = ms; // גם כשהחלון ממוזער – אותו זמן
+}
+applyLockSettings();
 const throttle = new L.UnlockThrottle();
 const now = () => performance.now();
 
@@ -58,7 +66,26 @@ function createWindow() {
   win.on('closed', () => { win = null; });
 }
 
+let pendingRestore = null;
+
+// ---------- חלונות קבצים (בבדיקות אוטומטיות: נתיבים קבועים במקום חלון) ----------
+const TEST_DIR = process.env.PV_TEST_DIALOG_DIR || null;
+const stamp = () => new Date().toISOString().slice(0, 10);
+
+async function pickSavePath(title, defaultName, filters) {
+  if (TEST_DIR) return path.join(TEST_DIR, defaultName);
+  const r = await dialog.showSaveDialog(win, { title, defaultPath: path.join(app.getPath('documents'), defaultName), filters });
+  return r.canceled || !r.filePath ? null : r.filePath;
+}
+
+async function pickOpenPath(title, filters) {
+  if (TEST_DIR) return process.env.PV_TEST_OPEN_FILE || null;
+  const r = await dialog.showOpenDialog(win, { title, properties: ['openFile'], filters });
+  return r.canceled || !r.filePaths.length ? null : r.filePaths[0];
+}
+
 function lock(auto = false) {
+  pendingRestore = null;
   if (vault) { vault.lock(); vault = null; }
   if (win) win.webContents.send('locked', { auto });
   return clearClipboard();
@@ -168,6 +195,7 @@ handle('save', (entry) => {
     id: typeof entry.id === 'string' ? entry.id : undefined,
     title: entry.title, username: String(entry.username || ''), password: String(entry.password || ''),
     url: String(entry.url || ''), notes: String(entry.notes || ''),
+    category: String(entry.category || 'general'),
   };
   const exists = clean.id && vault.entries.some((x) => x.id === clean.id);
   const next = exists ? V.updateEntry(vault.entries, clean) : V.addEntry(vault.entries, { ...clean, id: undefined });
@@ -196,7 +224,103 @@ handle('generate', (options) => {
   try { return { password: L.generatePassword(options || {}) }; } catch { return { error: 'options' }; }
 });
 
+handle('getSettings', () => ({ settings, choices: S.AUTO_LOCK_CHOICES }));
+handle('setSettings', (next) => {
+  settings = S.save(app.getPath('userData'), { ...settings, ...(next || {}) });
+  applyLockSettings();
+  if (vault) policy.onInteraction(now());
+  return { ok: true, settings };
+});
+
 handle('strength', (password) => ({ strength: L.strengthOf(password) }));
+
+// ---------- פתיחת אתר בדפדפן ----------
+handle('openUrl', async (id) => {
+  requireVault();
+  const e = vault.entries.find((x) => x.id === id);
+  if (!e || !e.url.trim()) return { error: 'noUrl' };
+  let u;
+  try { u = new URL(/^[a-z][a-z0-9+.-]*:\/\//i.test(e.url.trim()) ? e.url.trim() : `https://${e.url.trim()}`); } catch { return { error: 'badUrl' }; }
+  if (u.protocol !== 'https:' && u.protocol !== 'http:') return { error: 'badUrl' };
+  if (TEST_DIR) { globalThis.pvLastExternalUrl = u.href; return { ok: true }; }
+  await shell.openExternal(u.href); // נפתח בדפדפן ברירת המחדל; האפליקציה עצמה לא מתחברת לרשת
+  return { ok: true };
+});
+
+// ---------- ייצוא / ייבוא CSV ----------
+handle('exportCsv', async () => {
+  requireVault();
+  const file = await pickSavePath('ייצוא סיסמאות לקובץ CSV', `PasswordVault-${stamp()}.csv`, [{ name: 'CSV', extensions: ['csv'] }]);
+  if (!file) return { canceled: true };
+  fs.writeFileSync(file, C.toCsv(vault.entries), { encoding: 'utf8', mode: 0o600 });
+  return { ok: true, count: vault.entries.length, name: path.basename(file) };
+});
+
+handle('importCsv', async () => {
+  requireVault();
+  const file = await pickOpenPath('ייבוא סיסמאות מקובץ CSV', [{ name: 'CSV', extensions: ['csv'] }]);
+  if (!file) return { canceled: true };
+  if (fs.statSync(file).size > 20 * 1024 * 1024) return { error: 'tooBig' };
+  let parsed;
+  try { parsed = C.entriesFromCsv(fs.readFileSync(file, 'utf8')); } catch { return { error: 'csvFormat' }; }
+  const r = V.importEntries(vault.entries, parsed.entries);
+  if (r.added) vault.save(r.entries);
+  return { ok: true, added: r.added, duplicates: r.duplicates, skipped: parsed.skipped, entries: list() };
+});
+
+// ---------- גיבוי מוצפן / שחזור ----------
+handle('backup', async () => {
+  requireVault();
+  const file = await pickSavePath('שמירת גיבוי מוצפן', `PasswordVault-backup-${stamp()}.pvault`, [{ name: 'גיבוי כספת', extensions: ['pvault'] }]);
+  if (!file) return { canceled: true };
+  vault.save(vault.entries); // מוודא שהקובץ עדכני, ואז מעתיקים אותו כמו שהוא – מוצפן
+  fs.copyFileSync(store.file, file);
+  return { ok: true, name: path.basename(file) };
+});
+
+handle('restorePick', async () => {
+  requireVault();
+  const file = await pickOpenPath('בחירת קובץ גיבוי', [{ name: 'גיבוי כספת', extensions: ['pvault', 'bin'] }]);
+  if (!file) return { canceled: true };
+  pendingRestore = file;
+  return { ok: true, name: path.basename(file) };
+});
+
+handle('restoreApply', async (password) => {
+  requireVault();
+  if (!pendingRestore) return { error: 'generic' };
+  if (busy) return { error: 'busy' };
+  busy = true;
+  try {
+    const incoming = await V.readBackup(pendingRestore, Buffer.from(String(password || ''), 'utf8'));
+    const r = V.mergeEntries(vault.entries, incoming);
+    vault.save(r.entries);
+    pendingRestore = null;
+    return { ok: true, added: r.added, updated: r.updated, entries: list() };
+  } catch (e) {
+    if (e instanceof V.WrongPasswordError) return { error: 'wrong' };
+    if (e instanceof V.CorruptVaultError) return { error: 'corrupt' };
+    return { error: 'generic' };
+  } finally { busy = false; }
+});
+
+// ---------- החלפת סיסמת מאסטר ----------
+handle('changeMaster', async (current, next, confirm) => {
+  requireVault();
+  if (typeof next !== 'string' || [...next].length < 8) return { error: 'tooShort' };
+  if (next !== confirm) return { error: 'mismatch' };
+  if (busy) return { error: 'busy' };
+  busy = true;
+  try {
+    try {
+      (await store.unlock(Buffer.from(String(current || ''), 'utf8'))).lock();
+    } catch (e) {
+      return { error: e instanceof V.WrongPasswordError ? 'wrongCurrent' : 'generic' };
+    }
+    await vault.changePassword(Buffer.from(next, 'utf8'));
+    return { ok: true };
+  } finally { busy = false; }
+});
 
 ipcMain.on('activity', (event) => {
   if (win && event.sender === win.webContents && vault) policy.onInteraction(now());

@@ -7,16 +7,20 @@ import path from 'node:path';
 
 const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const userData = fs.mkdtempSync(path.join(os.tmpdir(), 'pv-e2e-'));
+const filesDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pv-files-'));
+const openFile = path.join(filesDir, 'open-me');
 const shots = process.env.PV_SHOTS || path.join(os.tmpdir(), 'pv-shots');
 fs.mkdirSync(shots, { recursive: true });
 const MASTER = 'Demo-Master-2026!';
+const NEW_MASTER = 'Changed-Master-2027!';
+const SAMPLE_COUNT = 7;
 const results = [];
 const step = async (name, fn) => { await fn(); results.push(name); process.stdout.write(`  ✓ ${name}\n`); };
 
 async function launch(extraEnv = {}) {
   const app = await electron.launch({
     args: ['--no-sandbox', root],
-    env: { ...process.env, PV_USER_DATA: userData, ...extraEnv },
+    env: { ...process.env, PV_USER_DATA: userData, PV_TEST_DIALOG_DIR: filesDir, PV_TEST_OPEN_FILE: openFile, ...extraEnv },
   });
   const page = await app.firstWindow();
   await page.waitForSelector('#lock-view:not([hidden])');
@@ -29,6 +33,17 @@ async function shot(page, name) {
   }
 }
 const count = (page) => page.locator('#entries .entry').count();
+const waitCount = (page, n) => page.waitForFunction((x) => document.querySelectorAll('#entries .entry').length === x, n);
+const snackHas = (page, text) => page.waitForFunction((t) => document.querySelector('#snackbar').textContent.includes(t), text);
+async function unlock(page, pw) {
+  await page.fill('#master', pw);
+  await page.click('#lock-submit');
+  await page.waitForSelector('#main-view:not([hidden])');
+}
+async function menu(page, action) {
+  await page.click('#menu-btn');
+  await page.click(`#menu [data-action="${action}"]`);
+}
 
 let { app, page } = await launch();
 await page.setViewportSize({ width: 1100, height: 740 });
@@ -40,34 +55,30 @@ await step('first run shows setup screen in Hebrew RTL', async () => {
   await shot(page, '1-setup.png');
 });
 
-await step('short master password rejected', async () => {
+await step('short / mismatched master password rejected', async () => {
   await page.fill('#master', 'short');
   await page.fill('#confirm', 'short');
   await page.click('#lock-submit');
   await page.waitForFunction(() => document.querySelector('#lock-error').textContent.includes('8'));
-});
-
-await step('mismatched confirmation rejected', async () => {
   await page.fill('#master', MASTER);
   await page.fill('#confirm', MASTER + 'x');
   await page.click('#lock-submit');
   await page.waitForFunction(() => document.querySelector('#lock-error').textContent.includes('תואמות'));
 });
 
-await step('create vault with 5 sample entries', async () => {
+await step(`create vault with ${SAMPLE_COUNT} sample entries`, async () => {
   await page.fill('#master', MASTER);
   await page.fill('#confirm', MASTER);
   await page.click('#lock-submit');
   await page.waitForSelector('#main-view:not([hidden])');
-  assert.equal(await count(page), 5);
+  await waitCount(page, SAMPLE_COUNT);
   await shot(page, '2-list.png');
 });
 
 await step('vault file is encrypted and master password not stored', async () => {
-  const files = fs.readdirSync(userData, { recursive: true }).map(String);
   const raw = fs.readFileSync(path.join(userData, 'vault.bin'));
   assert.equal(raw.subarray(0, 4).toString(), 'PVLT');
-  for (const f of files) {
+  for (const f of fs.readdirSync(userData, { recursive: true }).map(String)) {
     const p = path.join(userData, f);
     let st; try { st = fs.lstatSync(p); } catch { continue; }
     if (!st.isFile()) continue;
@@ -79,17 +90,28 @@ await step('vault file is encrypted and master password not stored', async () =>
 
 await step('search filters entries', async () => {
   await page.fill('#search', 'בנק');
-  assert.equal(await count(page), 1);
+  await waitCount(page, 1);
   await page.fill('#search', 'zzzz-none');
-  assert.equal(await count(page), 0);
+  await waitCount(page, 0);
   assert.ok(await page.isVisible('#empty'));
   await page.fill('#search', '');
-  assert.equal(await count(page), 5);
+  await waitCount(page, SAMPLE_COUNT);
 });
 
-await step('detail view: password hidden until revealed', async () => {
+await step('category chips filter the list', async () => {
+  const chips = await page.locator('#cats .chip').count();
+  assert.equal(chips, 1 + SAMPLE_COUNT); // "הכול" + קטגוריה לכל רשומת דוגמה
+  await page.click('#cats .chip[data-cat="banking"]');
+  await waitCount(page, 1);
+  assert.match(await page.textContent('#entries .entry .t'), /בנק/);
+  await page.click('#cats .chip >> nth=0');
+  await waitCount(page, SAMPLE_COUNT);
+});
+
+await step('detail view: category, hidden password, reveal', async () => {
   await page.click('#entries .entry >> nth=0');
   await page.waitForSelector('#detail:not([hidden])');
+  assert.ok((await page.textContent('#detail-cat')).length > 0);
   assert.equal(await page.textContent('#f-password .value'), '••••••••••');
   await page.click('#reveal');
   await page.waitForFunction(() => document.querySelector('#f-password .value').textContent.length === 16);
@@ -97,17 +119,27 @@ await step('detail view: password hidden until revealed', async () => {
   await page.click('#reveal');
 });
 
+await step('open website in default browser', async () => {
+  await page.click('#cats .chip[data-cat="banking"]');
+  await page.click('#entries .entry >> nth=0');
+  await page.click('#open-url');
+  await snackHas(page, 'נפתח');
+  assert.equal(await app.evaluate(() => globalThis.pvLastExternalUrl), 'https://bank.example.com/');
+  await page.click('#cats .chip >> nth=0');
+});
+
 await step('copy password to clipboard', async () => {
   await page.click('#f-password [data-copy="password"]');
-  await page.waitForFunction(() => document.querySelector('#snackbar').textContent.includes('הועתק'));
+  await snackHas(page, 'הועתק');
   const clip = await app.evaluate(async ({ clipboard }) => await clipboard.readText());
   assert.equal(clip.length, 16);
 });
 
-await step('add entry with generated password', async () => {
+await step('add entry with category and generated password', async () => {
   await page.click('#fab');
   await page.fill('#e-title', 'רשומת בדיקה');
   await page.fill('#e-username', 'tester@example.com');
+  await page.click('#e-cats .chip[data-cat="work"]');
   await page.click('#e-generate');
   await page.waitForFunction(() => document.querySelector('#gen-output').textContent.length === 16);
   await page.fill('#gen-length', '24');
@@ -118,8 +150,12 @@ await step('add entry with generated password', async () => {
   assert.equal((await page.inputValue('#e-password')).length, 24);
   await shot(page, '5-edit.png');
   await page.click('#edit-save');
-  await page.waitForFunction(() => document.querySelectorAll('#entries .entry').length === 6);
+  await waitCount(page, SAMPLE_COUNT + 1);
   assert.equal(await page.textContent('#detail-title'), 'רשומת בדיקה');
+  assert.match(await page.textContent('#detail-cat'), /עבודה/);
+  await page.click('#cats .chip[data-cat="work"]');
+  await waitCount(page, 2);
+  await page.click('#cats .chip >> nth=0');
 });
 
 await step('title is required', async () => {
@@ -127,7 +163,6 @@ await step('title is required', async () => {
   await page.click('#edit-save');
   await page.waitForFunction(() => document.querySelector('#edit-error').textContent.includes('חובה'));
   await page.click('#edit-cancel');
-  assert.equal(await count(page), 6);
 });
 
 await step('edit entry', async () => {
@@ -137,12 +172,61 @@ await step('edit entry', async () => {
   await page.waitForFunction(() => document.querySelector('#f-username .value').textContent === 'edited@example.com');
 });
 
+await step('encrypted backup file is created', async () => {
+  await menu(page, 'backup');
+  await snackHas(page, 'הגיבוי נשמר');
+  const f = fs.readdirSync(filesDir).find((n) => n.endsWith('.pvault'));
+  assert.ok(f, 'backup file missing');
+  const b = fs.readFileSync(path.join(filesDir, f));
+  assert.equal(b.subarray(0, 4).toString(), 'PVLT');
+  assert.equal(b.includes(Buffer.from('tester')), false);
+  fs.copyFileSync(path.join(filesDir, f), path.join(filesDir, 'backup-copy.pvault'));
+});
+
 await step('delete entry with confirmation', async () => {
   await page.click('#detail-delete');
   await page.waitForSelector('#confirm-dialog[open]');
   await shot(page, '6-delete.png');
   await page.click('#confirm-ok');
-  await page.waitForFunction(() => document.querySelectorAll('#entries .entry').length === 5);
+  await waitCount(page, SAMPLE_COUNT);
+});
+
+await step('restore from backup: wrong password rejected, then merge', async () => {
+  fs.copyFileSync(path.join(filesDir, 'backup-copy.pvault'), openFile);
+  await menu(page, 'restore');
+  await page.waitForSelector('#restore-dialog[open]');
+  await page.fill('#restore-password', 'wrong-one');
+  await page.click('#restore-ok');
+  await page.waitForFunction(() => document.querySelector('#restore-error').textContent === 'סיסמה שגויה');
+  await page.fill('#restore-password', MASTER);
+  await page.click('#restore-ok');
+  await snackHas(page, 'השחזור הושלם');
+  await waitCount(page, SAMPLE_COUNT + 1);
+});
+
+await step('export CSV (with warning) for browsers', async () => {
+  await menu(page, 'exportCsv');
+  await page.waitForSelector('#confirm-dialog[open]');
+  assert.match(await page.textContent('#confirm-body'), /גלוי/);
+  await page.click('#confirm-ok');
+  await snackHas(page, 'יוצאו');
+  const f = fs.readdirSync(filesDir).find((n) => n.endsWith('.csv'));
+  const text = fs.readFileSync(path.join(filesDir, f), 'utf8');
+  assert.match(text, /^﻿name,url,username,password,note,category\r\n/);
+  assert.equal(text.trim().split('\r\n').length, SAMPLE_COUNT + 2);
+});
+
+await step('import CSV from Chrome (duplicates skipped, category guessed)', async () => {
+  fs.writeFileSync(openFile, 'name,url,username,password,note\n'
+    + 'Leumi,https://www.leumi.co.il/,me@example.com,Imp0rted!pw,\n'
+    + 'Leumi,https://www.leumi.co.il/,me@example.com,Imp0rted!pw,\n'
+    + 'Netflix,https://www.netflix.com/,tv@example.com,Fl1x!pw,\n');
+  await menu(page, 'importCsv');
+  await snackHas(page, 'נוספו 2');
+  await waitCount(page, SAMPLE_COUNT + 3);
+  await page.click('#cats .chip[data-cat="entertainment"]');
+  await waitCount(page, 2);
+  await page.click('#cats .chip >> nth=0');
 });
 
 await step('generator option: digits only', async () => {
@@ -163,19 +247,40 @@ await step('network is blocked', async () => {
   assert.equal(mainOk, false);
 });
 
+await step('auto-lock setting can be changed (default 15 minutes)', async () => {
+  await menu(page, 'lockSettings');
+  await page.waitForSelector('#lock-dialog[open]');
+  assert.equal(await page.inputValue('#lock-choices input:checked'), '15');
+  await page.click('#lock-choices input[value="60"]');
+  await page.click('#lock-ok');
+  await snackHas(page, 'שעה');
+  assert.equal(JSON.parse(fs.readFileSync(path.join(userData, 'settings.json'), 'utf8')).autoLockMinutes, 60);
+});
+
+await step('change master password', async () => {
+  await menu(page, 'changeMaster');
+  await page.fill('#m-current', 'not-it');
+  await page.fill('#m-new', NEW_MASTER);
+  await page.fill('#m-confirm', NEW_MASTER);
+  await page.click('#m-ok');
+  await page.waitForFunction(() => document.querySelector('#m-error').textContent.includes('שגויה'));
+  await page.fill('#m-current', MASTER);
+  await page.click('#m-ok');
+  await snackHas(page, 'הוחלפה');
+});
+
 await step('manual lock clears the screen and clipboard', async () => {
   await page.click('#lock-btn');
   await page.waitForSelector('#lock-view:not([hidden])');
   assert.equal(await page.textContent('#lock-title'), 'הכספת נעולה');
   assert.equal(await page.locator('#entries .entry').count(), 0);
   await page.waitForTimeout(500);
-  const clip = await app.evaluate(async ({ clipboard }) => await clipboard.readText());
-  assert.equal(clip, '');
+  assert.equal(await app.evaluate(async ({ clipboard }) => await clipboard.readText()), '');
   await shot(page, '7-locked.png');
 });
 
-await step('wrong master password rejected', async () => {
-  await page.fill('#master', 'not-the-password');
+await step('old master password no longer works', async () => {
+  await page.fill('#master', MASTER);
   await page.click('#lock-submit');
   await page.waitForFunction(() => document.querySelector('#lock-error').textContent === 'סיסמה שגויה');
 });
@@ -184,23 +289,19 @@ await app.close();
 
 ({ app, page } = await launch({ PV_TEST_INACTIVITY_MS: '3000' }));
 
-await step('data persists after restart', async () => {
+await step('data persists after restart (new master password)', async () => {
   assert.equal(await page.textContent('#lock-title'), 'הכספת נעולה');
-  await page.fill('#master', MASTER);
-  await page.click('#lock-submit');
-  await page.waitForSelector('#main-view:not([hidden])');
-  assert.equal(await count(page), 5);
+  await unlock(page, NEW_MASTER);
+  assert.equal(await count(page), SAMPLE_COUNT + 3);
 });
 
 await step('auto-lock after inactivity', async () => {
   await page.waitForSelector('#lock-view:not([hidden])', { timeout: 10_000 });
-  await page.waitForFunction(() => document.querySelector('#snackbar').textContent.includes('אוטומטית'));
+  await snackHas(page, 'אוטומטית');
 });
 
 await step('narrow window shows one pane at a time', async () => {
-  await page.fill('#master', MASTER);
-  await page.click('#lock-submit');
-  await page.waitForSelector('#main-view:not([hidden])');
+  await unlock(page, NEW_MASTER);
   await page.setViewportSize({ width: 480, height: 760 });
   assert.equal(await page.isVisible('#detail-pane'), false);
   await page.click('#entries .entry >> nth=1');
