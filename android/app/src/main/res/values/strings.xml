@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">כספת סיסמאות</string>
+    <string name="autofill_unlock">🔒 פתח את הכספת למילוי</string>
+    <string name="autofill_search">חיפוש בכספת…</string>
 </resources>

@@ -189,7 +189,7 @@ test('unlock throttle', () => {
 
 test('sample data is fake', () => {
   const s = L.sampleEntries();
-  assert.equal(s.length, 7);
+  assert.equal(s.length, 8);
   assert.ok(s.every((e) => e.title.startsWith('דוגמה')));
   assert.ok(s.every((e) => L.CATEGORY_KEYS.includes(e.category)));
   assert.ok(s.every((e) => !e.url || e.url.includes('example.com')));

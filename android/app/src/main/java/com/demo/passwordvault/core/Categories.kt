@@ -4,12 +4,13 @@ import java.util.Locale
 
 /** קטגוריות – אותם מפתחות כמו בגרסת המחשב, כדי שגיבויים יעברו בין המכשירים. */
 object Categories {
-    val KEYS = listOf("general", "banking", "email", "social", "shopping", "work", "home", "entertainment")
+    val KEYS = listOf("general", "banking", "email", "social", "shopping", "work", "home", "entertainment", "torrents")
     const val DEFAULT = "general"
 
     fun normalize(key: String?): String = if (key != null && key in KEYS) key else DEFAULT
 
     private val HINTS: Map<String, List<String>> = linkedMapOf(
+        "torrents" to listOf("torrent", "טורנט", "tracker", "rutracker", "1337x", "piratebay", "rarbg", "yts", "nyaa", "fuzer", "iptorrents", "torrentleech", "bittorrent", "qbittorrent", "utorrent", "passthepopcorn", "privatehd", "filelist", "seedbox"),
         "banking" to listOf("bank", "בנק", "paypal", "pay", "visa", "mastercard", "isracard", "cal-online", "max.co", "leumi", "hapoalim", "discount", "mizrahi", "credit", "אשראי", "ביטוח", "insurance", "crypto", "binance", "coinbase"),
         "email" to listOf("mail", "דואר", "outlook", "gmail", "yahoo", "proton", "walla"),
         "social" to listOf("facebook", "instagram", "twitter", "x.com", "tiktok", "linkedin", "reddit", "whatsapp", "telegram", "discord", "snapchat", "social", "רשת חברתית"),

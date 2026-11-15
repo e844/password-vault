@@ -29,6 +29,9 @@ test('guess category', () => {
   assert.equal(L.guessCategory('Facebook', ''), 'social');
   assert.equal(L.guessCategory('Netflix', 'netflix.com'), 'entertainment');
   assert.equal(L.guessCategory('משהו', 'https://example.org'), 'general');
+  assert.equal(L.guessCategory('RuTracker', 'https://rutracker.org'), 'torrents');
+  assert.equal(L.guessCategory('', 'https://www.torrentleech.org/user/login'), 'torrents');
+  assert.equal(L.guessCategory('Nyaa', 'https://nyaa.si'), 'torrents');
 });
 
 test('csv: parse quotes, commas, newlines, BOM, CRLF', () => {

@@ -34,6 +34,9 @@ class FeaturesTest {
         assertEquals("social", Categories.guess("Facebook", ""))
         assertEquals("entertainment", Categories.guess("Netflix", "netflix.com"))
         assertEquals("general", Categories.guess("משהו", "https://example.org"))
+        assertEquals("torrents", Categories.guess("RuTracker", "https://rutracker.org"))
+        assertEquals("torrents", Categories.guess("", "https://www.torrentleech.org/user/login"))
+        assertEquals("torrents", Categories.guess("Nyaa", "https://nyaa.si"))
     }
 
     @Test fun csvParseQuotesNewlinesBom() {
@@ -141,5 +144,36 @@ class FeaturesTest {
         p.setMinutes(5)
         assertTrue(p.shouldLock(1_000_000_000_000L))
         assertEquals(listOf(1, 5, 15, 30, 60, 0), AutoLockPolicy.CHOICES_MINUTES)
+    }
+}
+
+class AutofillMatchTest {
+    private val bank = VaultEntry(title = "בנק", url = "https://www.leumi.co.il/login", username = "u", password = "p")
+    private val google = VaultEntry(title = "Gmail", url = "https://accounts.google.com", username = "g", password = "p")
+    private val fb = VaultEntry(title = "Facebook", url = "facebook.com", username = "f", password = "p")
+    private val noUrl = VaultEntry(title = "Wi-Fi", username = "", password = "p")
+    private val all = listOf(bank, google, fb, noUrl)
+
+    @Test fun baseDomain() {
+        assertEquals("leumi.co.il", AutofillMatch.baseDomain("hb2.leumi.co.il"))
+        assertEquals("google.com", AutofillMatch.baseDomain("accounts.google.com"))
+        assertEquals("example.com", AutofillMatch.baseDomain("www.example.com"))
+    }
+
+    @Test fun webDomainMatchesOnlySameSite() {
+        assertEquals(listOf(bank), AutofillMatch.matches(all, "hb2.leumi.co.il", "com.android.chrome"))
+        assertEquals(listOf(google), AutofillMatch.matches(all, "mail.google.com", "com.android.chrome"))
+        assertEquals(listOf(fb), AutofillMatch.matches(all, "m.facebook.com", "com.android.chrome"))
+        // אתר מתחזה לא מקבל את הסיסמה
+        assertTrue(AutofillMatch.matches(all, "leumi.co.il.evil.com", "com.android.chrome").isEmpty())
+        assertTrue(AutofillMatch.matches(all, "faceb00k.com", "com.android.chrome").isEmpty())
+        // בדפדפן לא מתאימים לפי שם האפליקציה
+        assertTrue(AutofillMatch.matches(all, "example.org", "com.android.chrome").isEmpty())
+    }
+
+    @Test fun appPackageMatches() {
+        assertEquals(listOf(fb), AutofillMatch.matches(all, null, "com.facebook.orca"))
+        assertEquals(listOf(google), AutofillMatch.matches(all, null, "com.google.android.gm.gmail"))
+        assertTrue(AutofillMatch.matches(all, null, "com.unknown.thing").isEmpty())
     }
 }

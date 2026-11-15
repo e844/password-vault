@@ -13,6 +13,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.demo.passwordvault.autofill.VaultHolder
 import com.demo.passwordvault.core.AutoLockPolicy
 import com.demo.passwordvault.core.CorruptVaultException
 import com.demo.passwordvault.core.Csv
@@ -172,6 +173,7 @@ class VaultViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun opened(s: VaultSession) {
         session = s
+        VaultHolder.session = s
         entries = s.entries
         query = ""
         activeCategory = "all"
@@ -191,6 +193,7 @@ class VaultViewModel(app: Application) : AndroidViewModel(app) {
         dialogError = null
         pendingRestore = null
         message = if (auto) Txt.AUTO_LOCKED else null
+        VaultHolder.session = null
         clearClipboardNow()
         viewModelScope.launch {
             mutex.withLock {
@@ -478,6 +481,7 @@ class VaultViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     override fun onCleared() {
+        VaultHolder.session = null
         session?.lock()
         session = null
         super.onCleared()

@@ -92,9 +92,10 @@ class UnlockThrottle {
 }
 
 // ---------- קטגוריות ----------
-const CATEGORY_KEYS = ['general', 'banking', 'email', 'social', 'shopping', 'work', 'home', 'entertainment'];
+const CATEGORY_KEYS = ['general', 'banking', 'email', 'social', 'shopping', 'work', 'home', 'entertainment', 'torrents'];
 
 const CATEGORY_HINTS = {
+  torrents: ['torrent', 'טורנט', 'tracker', 'rutracker', '1337x', 'piratebay', 'rarbg', 'yts', 'nyaa', 'fuzer', 'iptorrents', 'torrentleech', 'bittorrent', 'qbittorrent', 'utorrent', 'passthepopcorn', 'privatehd', 'filelist', 'seedbox'],
   banking: ['bank', 'בנק', 'paypal', 'pay', 'visa', 'mastercard', 'isracard', 'cal-online', 'max.co', 'leumi', 'hapoalim', 'discount', 'mizrahi', 'credit', 'אשראי', 'ביטוח', 'insurance', 'crypto', 'binance', 'coinbase'],
   email: ['mail', 'דואר', 'outlook', 'gmail', 'yahoo', 'proton', 'walla'],
   social: ['facebook', 'instagram', 'twitter', 'x.com', 'tiktok', 'linkedin', 'reddit', 'whatsapp', 'telegram', 'discord', 'snapchat', 'social', 'רשת חברתית'],
@@ -127,6 +128,7 @@ function sampleEntries() {
     { title: 'דוגמה – חנות מקוונת', username: 'shopper@example.com', password: pw(), url: 'https://shop.example.com', notes: 'מספר לקוח: 000000', category: 'shopping' },
     { title: 'דוגמה – Wi-Fi בבית', username: '', password: pw(), url: '', notes: 'שם רשת: Demo-WiFi', category: 'home' },
     { title: 'דוגמה – מערכת בעבודה', username: 'd.demo', password: pw(), url: 'https://work.example.com', notes: '', category: 'work' },
+    { title: 'דוגמה – אתר טורנטים', username: 'seeder_demo', password: pw(), url: 'https://tracker.example.com', notes: 'יחס שיתוף: 1.0 (מומצא)', category: 'torrents' },
     { title: 'דוגמה – סטרימינג', username: 'family@example.com', password: pw(), url: 'https://tv.example.com', notes: 'חשבון משפחתי', category: 'entertainment' },
   ].map((e) => ({ id: crypto.randomUUID(), updatedAt: Date.now(), ...e }));
 }

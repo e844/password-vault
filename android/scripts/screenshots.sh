@@ -91,7 +91,7 @@ type_in master "$MASTER"
 type_in confirm "$MASTER"
 shot android-1-setup
 tap submit
-expect_text "7 רשומות" "vault created with 7 sample entries"
+expect_text "8 רשומות" "vault created with 8 sample entries"
 shot android-2-list
 
 echo "== categories =="
@@ -99,7 +99,7 @@ tap cat_banking
 expect_text "רשומה אחת" "category filter shows one banking entry"
 shot android-2b-category
 tap cat_all
-expect_text "7 רשומות" "back to all entries"
+expect_text "8 רשומות" "back to all entries"
 
 echo "== detail =="
 tap entry 1
@@ -123,7 +123,7 @@ shot android-5-edit
 tap save
 expect_text "Demo Server" "entry saved"
 tap back
-expect_text "8 רשומות" "list has 8 entries"
+expect_text "9 רשומות" "list has 9 entries"
 
 echo "== auto-lock setting =="
 tap menu
@@ -155,7 +155,7 @@ adb shell am start -W -n "$PKG/com.demo.passwordvault.MainActivity"
 expect_text "הכספת נעולה" "starts locked after restart"
 type_in master "$MASTER"
 tap submit
-expect_text "8 רשומות" "data persisted (8 entries)"
+expect_text "9 רשומות" "data persisted (9 entries)"
 shot android-8-dark-list
 tap entry 0
 tap reveal
@@ -164,7 +164,7 @@ shot android-9-dark-detail
 echo "== delete =="
 tap delete
 tap confirm_delete
-expect_text "7 רשומות" "entry deleted"
+expect_text "8 רשומות" "entry deleted"
 
 adb shell cmd uimode night no
 echo "ALL ANDROID UI CHECKS PASSED"

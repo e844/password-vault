@@ -13,7 +13,7 @@ const shots = process.env.PV_SHOTS || path.join(os.tmpdir(), 'pv-shots');
 fs.mkdirSync(shots, { recursive: true });
 const MASTER = 'Demo-Master-2026!';
 const NEW_MASTER = 'Changed-Master-2027!';
-const SAMPLE_COUNT = 7;
+const SAMPLE_COUNT = 8;
 const results = [];
 const step = async (name, fn) => { await fn(); results.push(name); process.stdout.write(`  ✓ ${name}\n`); };
 

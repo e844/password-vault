@@ -21,6 +21,7 @@ object AppIcons {
     val Work by lazy { icon("work", "M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z") }
     val Home by lazy { icon("home", "M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z") }
     val Movie by lazy { icon("movie", "M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4z") }
+    val Torrent by lazy { icon("torrent", "M19.35 10.04A7.49 7.49 0 0012 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 000 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z") }
     val All by lazy { icon("all", "M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z") }
     val OpenInNew by lazy { icon("open", "M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z") }
     val Upload by lazy { icon("upload", "M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z") }
@@ -39,6 +40,7 @@ object AppIcons {
         "work" -> Work
         "home" -> Home
         "entertainment" -> Movie
+        "torrents" -> Torrent
         else -> Folder
     }
 
@@ -51,6 +53,7 @@ object AppIcons {
         "work" -> 195f
         "home" -> 52f
         "entertainment" -> 330f
+        "torrents" -> 100f
         else -> 220f
     }
 }

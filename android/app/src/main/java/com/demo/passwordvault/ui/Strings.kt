@@ -82,6 +82,7 @@ object Txt {
         "work" -> "עבודה"
         "home" -> "בית"
         "entertainment" -> "בידור"
+        "torrents" -> "טורנטים"
         else -> "כללי"
     }
     const val CATEGORY = "קטגוריה"
@@ -95,6 +96,8 @@ object Txt {
     const val MENU_RESTORE = "שחזור מגיבוי"
     const val MENU_AUTOLOCK = "נעילה אוטומטית"
     const val MENU_CHANGE_MASTER = "החלפת סיסמת מאסטר"
+    const val MENU_AUTOFILL = "הפעלת מילוי אוטומטי"
+    const val AUTOFILL_ON = "המילוי האוטומטי כבר פעיל"
     const val EXPORT_TITLE = "ייצוא לקובץ לא מוצפן"
     const val EXPORT_BODY = "קובץ ה-CSV יכיל את כל הסיסמאות כטקסט גלוי. השתמש בו רק לייבוא לדפדפן (Chrome, Edge, Firefox) או למנהל סיסמאות אחר, ומחק אותו מיד אחר כך."
     const val EXPORT = "ייצוא"

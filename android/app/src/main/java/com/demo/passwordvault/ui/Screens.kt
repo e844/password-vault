@@ -283,6 +283,7 @@ private fun LockScreen(vm: VaultViewModel, setup: Boolean, snackbar: SnackbarHos
 
 @Composable
 private fun HomeScreen(vm: VaultViewModel, snackbar: SnackbarHostState) {
+    val context = LocalContext.current
     val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     var menuOpen by remember { mutableStateOf(false) }
 
@@ -303,6 +304,11 @@ private fun HomeScreen(vm: VaultViewModel, snackbar: SnackbarHostState) {
                             Icon(Icons.Filled.MoreVert, contentDescription = Txt.MORE)
                         }
                         DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                            MenuRow(Txt.MENU_AUTOFILL, AppIcons.Key, "menu_autofill") {
+                                menuOpen = false
+                                enableAutofill(context) { vm.message = it }
+                            }
+                            HorizontalDivider()
                             MenuRow(Txt.MENU_IMPORT, AppIcons.Upload, "menu_import") {
                                 menuOpen = false
                                 importLauncher.launch(arrayOf("text/csv", "text/comma-separated-values", "text/plain", "application/csv", "*/*"))
@@ -907,6 +913,23 @@ private fun openInBrowser(context: Context, raw: String, onError: (String) -> Un
         context.startActivity(Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     } catch (e: ActivityNotFoundException) {
         onError(Txt.NO_BROWSER)
+    }
+}
+
+/** פותח את מסך ההגדרות של אנדרואיד לבחירת "כספת סיסמאות" כשירות המילוי האוטומטי. */
+private fun enableAutofill(context: Context, onMessage: (String) -> Unit) {
+    val am = context.getSystemService(android.view.autofill.AutofillManager::class.java)
+    if (am != null && am.hasEnabledAutofillServices()) {
+        onMessage(Txt.AUTOFILL_ON)
+        return
+    }
+    try {
+        context.startActivity(
+            Intent(android.provider.Settings.ACTION_REQUEST_SET_AUTOFILL_SERVICE)
+                .setData(Uri.parse("package:" + context.packageName)),
+        )
+    } catch (e: ActivityNotFoundException) {
+        context.startActivity(Intent(android.provider.Settings.ACTION_SETTINGS))
     }
 }
 

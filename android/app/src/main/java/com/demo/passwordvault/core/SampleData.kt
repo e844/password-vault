@@ -11,6 +11,7 @@ object SampleData {
             VaultEntry(title = "דוגמה – חנות מקוונת", username = "shopper@example.com", password = pw(), url = "https://shop.example.com", notes = "מספר לקוח: 000000", category = "shopping"),
             VaultEntry(title = "דוגמה – Wi-Fi בבית", username = "", password = pw(), notes = "שם רשת: Demo-WiFi", category = "home"),
             VaultEntry(title = "דוגמה – מערכת בעבודה", username = "d.demo", password = pw(), url = "https://work.example.com", category = "work"),
+            VaultEntry(title = "דוגמה – אתר טורנטים", username = "seeder_demo", password = pw(), url = "https://tracker.example.com", notes = "יחס שיתוף: 1.0 (מומצא)", category = "torrents"),
             VaultEntry(title = "דוגמה – סטרימינג", username = "family@example.com", password = pw(), url = "https://tv.example.com", notes = "חשבון משפחתי", category = "entertainment"),
         )
     }
