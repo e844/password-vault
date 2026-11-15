@@ -8,7 +8,28 @@ PKG="com.demo.passwordvault.screenshot"
 MASTER="Demo-Master-2026"
 mkdir -p "$OUT"
 
-dump() { adb exec-out uiautomator dump /dev/tty 2>/dev/null > /tmp/ui.raw || true; }
+# אמולטור איטי ב-CI מקפיץ לפעמים "System UI isn't responding" – לוחצים "Wait" וממשיכים
+dismiss_system_dialog() {
+  local c
+  c=$(python3 - <<'PY'
+import re
+x = open('/tmp/ui.raw', encoding='utf-8', errors='ignore').read()
+m = re.search(r'resource-id="android:id/aerr_wait"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', x)
+if m:
+    a = list(map(int, m.groups()))
+    print((a[0] + a[2]) // 2, (a[1] + a[3]) // 2)
+PY
+)
+  if [ -n "$c" ]; then echo "  (dismissing system ANR dialog)"; adb shell input tap $c; sleep 2; return 0; fi
+  return 1
+}
+
+dump() {
+  for _ in 1 2 3; do
+    adb exec-out uiautomator dump /dev/tty 2>/dev/null > /tmp/ui.raw || true
+    dismiss_system_dialog || return 0
+  done
+}
 
 center() { # resource-id, index
   dump
@@ -52,6 +73,7 @@ adb shell settings put global animator_duration_scale 0
 # בלי מקלדת על המסך, כדי שלא תסתיר את הצילומים (הקלדה דרך adb עובדת גם בלעדיה)
 for ime in $(adb shell ime list -s | tr -d '\r'); do adb shell ime disable "$ime" >/dev/null || true; done
 adb shell cmd uimode night no
+sleep 20 # לתת לאמולטור להתייצב אחרי האתחול
 adb install -r "$APK"
 adb shell am start -W -n "$PKG/com.demo.passwordvault.MainActivity"
 
