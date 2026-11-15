@@ -1,0 +1,86 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  android:
+    name: Android APK
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: android
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Unit tests
+        run: chmod +x gradlew && ./gradlew --no-daemon testDebugUnitTest
+      - name: Build APK
+        run: ./gradlew --no-daemon assembleDebug
+      - run: cp app/build/outputs/apk/debug/app-debug.apk "$GITHUB_WORKSPACE/PasswordVault-Android.apk"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android
+          path: PasswordVault-Android.apk
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: android-test-report
+          path: android/app/build/reports/
+
+  windows:
+    name: Windows EXE
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: desktop
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - name: Unit tests
+        run: npm test
+      - name: Package
+        run: >
+          npx @electron/packager . PasswordVault --platform=win32 --arch=x64
+          --icon=build/icon.ico --asar --out=out --overwrite
+          --app-copyright="Demo" --win32metadata.ProductName="PasswordVault"
+          --ignore="^/test" --ignore="^/out" --ignore="^/README"
+      - name: Zip
+        shell: pwsh
+        run: Compress-Archive -Path out/PasswordVault-win32-x64 -DestinationPath "$env:GITHUB_WORKSPACE/PasswordVault-Windows.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: PasswordVault-Windows.zip
+
+  release:
+    name: Publish downloads
+    needs: [android, windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="build-${{ github.run_number }}"
+          gh release create "$TAG" dist/PasswordVault-Android.apk dist/PasswordVault-Windows.zip \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease \
+            --title "גרסת בדיקה #${{ github.run_number }}" \
+            --notes "גרסת בדיקה עם נתוני דוגמה בלבד. Android: PasswordVault-Android.apk · Windows: PasswordVault-Windows.zip (לחלץ ולהפעיל PasswordVault.exe)."

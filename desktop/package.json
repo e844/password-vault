@@ -1,0 +1,20 @@
+{
+  "name": "password-vault-desktop",
+  "productName": "PasswordVault",
+  "version": "0.1.0",
+  "description": "כספת סיסמאות – גרסת מחשב (נתוני דוגמה בלבד)",
+  "main": "src/main.js",
+  "author": "Demo",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test test/core.test.js",
+    "test:e2e": "node test/e2e.mjs"
+  },
+  "devDependencies": {
+    "@electron/packager": "^20.3.0",
+    "electron": "^45.3.2",
+    "playwright-core": "^1.65.1"
+  }
+}

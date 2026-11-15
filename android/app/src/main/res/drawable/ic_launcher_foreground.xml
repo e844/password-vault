@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- מנעול פשוט במרכז האייקון -->
+    <path
+        android:fillColor="#1F3B66"
+        android:pathData="M54,30c-7.7,0 -14,6.3 -14,14v6h-3c-2.2,0 -4,1.8 -4,4v20c0,2.2 1.8,4 4,4h34c2.2,0 4,-1.8 4,-4V54c0,-2.2 -1.8,-4 -4,-4h-3v-6c0,-7.7 -6.3,-14 -14,-14zM46,44c0,-4.4 3.6,-8 8,-8s8,3.6 8,8v6H46V44zM54,58c2.2,0 4,1.8 4,4c0,1.5 -0.8,2.8 -2,3.4V70h-4v-4.6c-1.2,-0.7 -2,-2 -2,-3.4c0,-2.2 1.8,-4 4,-4z" />
+</vector>

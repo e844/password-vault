@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>כספת סיסמאות</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- ===== מסך יצירה / פתיחה ===== -->
+  <main id="lock-view" class="view" hidden>
+    <section class="lock-card">
+      <div class="lock-badge" data-icon="lock"></div>
+      <h1 id="lock-title"></h1>
+      <p id="lock-body" class="muted"></p>
+      <form id="lock-form" autocomplete="off">
+        <label class="field">
+          <span>סיסמת מאסטר</span>
+          <div class="input-row">
+            <input id="master" type="password" dir="ltr" autocomplete="off" spellcheck="false">
+            <button type="button" class="text-btn toggle-vis" data-target="master">הצג</button>
+          </div>
+        </label>
+        <label class="field" id="confirm-wrap">
+          <span>אימות סיסמת מאסטר</span>
+          <div class="input-row">
+            <input id="confirm" type="password" dir="ltr" autocomplete="off" spellcheck="false">
+          </div>
+        </label>
+        <div id="setup-strength" class="strength" hidden><div class="bar"><i></i></div><small></small></div>
+        <p id="lock-error" class="error" role="alert"></p>
+        <button id="lock-submit" class="filled-btn wide" type="submit"></button>
+      </form>
+      <p id="sample-banner" class="banner">גרסת בדיקה – הכספת נוצרת עם נתוני דוגמה בלבד</p>
+    </section>
+  </main>
+
+  <!-- ===== מסך ראשי ===== -->
+  <div id="main-view" class="view" hidden>
+    <header class="app-bar">
+      <h1>כספת סיסמאות</h1>
+      <div class="spacer"></div>
+      <button id="open-generator" class="tonal-btn" title="מחולל סיסמאות"><span data-icon="key"></span>מחולל סיסמאות</button>
+      <button id="lock-btn" class="icon-btn" title="נעילה" aria-label="נעילה"><span data-icon="lock"></span></button>
+    </header>
+    <div class="panes">
+      <section class="list-pane">
+        <div class="search">
+          <span data-icon="search"></span>
+          <input id="search" type="search" placeholder="חיפוש רשומות" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="list-meta"><span id="count" class="muted"></span></div>
+        <ul id="entries" class="entries"></ul>
+        <p id="empty" class="muted empty" hidden></p>
+      </section>
+      <section class="detail-pane" id="detail-pane">
+        <div id="detail-empty" class="detail-empty">
+          <div class="lock-badge small" data-icon="key"></div>
+          <p class="muted">בחר רשומה מהרשימה כדי לראות את הפרטים</p>
+        </div>
+        <article id="detail" hidden>
+          <div class="detail-head">
+            <button id="detail-back" class="icon-btn only-narrow" aria-label="חזרה" title="חזרה"><span data-icon="back"></span></button>
+            <div class="avatar big" id="detail-avatar"></div>
+            <h2 id="detail-title"></h2>
+            <div class="spacer"></div>
+            <button id="detail-edit" class="icon-btn" title="עריכה" aria-label="עריכה"><span data-icon="edit"></span></button>
+            <button id="detail-delete" class="icon-btn" title="מחיקה" aria-label="מחיקה"><span data-icon="delete"></span></button>
+          </div>
+          <div class="field-card" id="f-username">
+            <div class="fc-text"><label>שם משתמש</label><div class="value" dir="ltr"></div></div>
+            <button class="text-btn" data-copy="username"><span data-icon="copy"></span>העתק</button>
+          </div>
+          <div class="field-card" id="f-password">
+            <div class="fc-text"><label>סיסמה</label><div class="value mono" dir="ltr">••••••••••</div></div>
+            <button class="text-btn" id="reveal">הצג</button>
+            <button class="text-btn" data-copy="password"><span data-icon="copy"></span>העתק</button>
+          </div>
+          <div id="detail-strength" class="strength" hidden><div class="bar"><i></i></div><small></small></div>
+          <div class="field-card" id="f-url">
+            <div class="fc-text"><label>כתובת אתר</label><div class="value" dir="ltr"></div></div>
+            <button class="text-btn" data-copy="url"><span data-icon="copy"></span>העתק</button>
+          </div>
+          <div class="field-card" id="f-notes">
+            <div class="fc-text"><label>הערות</label><div class="value notes"></div></div>
+          </div>
+          <p id="detail-updated" class="muted small-text"></p>
+        </article>
+      </section>
+    </div>
+    <button id="fab" class="fab"><span data-icon="add"></span>הוספה</button>
+  </div>
+
+  <!-- ===== חלון עריכה ===== -->
+  <dialog id="edit-dialog">
+    <form id="edit-form" method="dialog" autocomplete="off">
+      <h2 id="edit-title"></h2>
+      <label class="field"><span>שם *</span><div class="input-row"><input id="e-title" type="text" spellcheck="false"></div></label>
+      <label class="field"><span>שם משתמש</span><div class="input-row"><input id="e-username" type="text" dir="ltr" spellcheck="false"></div></label>
+      <label class="field"><span>סיסמה</span>
+        <div class="input-row">
+          <input id="e-password" type="password" dir="ltr" spellcheck="false" autocomplete="off">
+          <button type="button" class="text-btn toggle-vis" data-target="e-password">הצג</button>
+        </div>
+      </label>
+      <div id="edit-strength" class="strength" hidden><div class="bar"><i></i></div><small></small></div>
+      <button type="button" id="e-generate" class="tonal-btn"><span data-icon="refresh"></span>צור סיסמה</button>
+      <label class="field"><span>כתובת אתר</span><div class="input-row"><input id="e-url" type="text" dir="ltr" spellcheck="false"></div></label>
+      <label class="field"><span>הערות</span><div class="input-row"><textarea id="e-notes" rows="3"></textarea></div></label>
+      <p id="edit-error" class="error" role="alert"></p>
+      <div class="dialog-actions">
+        <button type="button" class="text-btn" id="edit-cancel">ביטול</button>
+        <button type="submit" class="filled-btn" id="edit-save">שמירה</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- ===== מחולל סיסמאות ===== -->
+  <dialog id="gen-dialog">
+    <div class="gen">
+      <h2>מחולל סיסמאות</h2>
+      <div class="gen-output mono" id="gen-output" dir="ltr"></div>
+      <div id="gen-strength" class="strength"><div class="bar"><i></i></div><small></small></div>
+      <div class="row">
+        <button type="button" class="tonal-btn" id="gen-refresh"><span data-icon="refresh"></span>סיסמה חדשה</button>
+        <button type="button" class="outlined-btn" id="gen-copy"><span data-icon="copy"></span>העתק</button>
+      </div>
+      <label class="slider-label">אורך: <b id="gen-len-label">16</b></label>
+      <input type="range" id="gen-length" min="8" max="64" value="16">
+      <label class="switch-row"><span>אותיות קטנות (a-z)</span><input type="checkbox" class="switch" id="gen-lower" checked></label>
+      <label class="switch-row"><span>אותיות גדולות (A-Z)</span><input type="checkbox" class="switch" id="gen-upper" checked></label>
+      <label class="switch-row"><span>ספרות (0-9)</span><input type="checkbox" class="switch" id="gen-digits" checked></label>
+      <label class="switch-row"><span>סימנים (!@#...)</span><input type="checkbox" class="switch" id="gen-symbols" checked></label>
+      <label class="switch-row"><span>בלי תווים דומים (l, 1, O, 0)</span><input type="checkbox" class="switch" id="gen-ambig"></label>
+      <div class="dialog-actions">
+        <button type="button" class="text-btn" id="gen-close">סגירה</button>
+        <button type="button" class="filled-btn" id="gen-use">השתמש בסיסמה</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- ===== אישור מחיקה ===== -->
+  <dialog id="confirm-dialog">
+    <div class="confirm">
+      <div class="lock-badge small danger" data-icon="delete"></div>
+      <h2>למחוק את הרשומה?</h2>
+      <p id="confirm-body" class="muted"></p>
+      <div class="dialog-actions">
+        <button type="button" class="text-btn" id="confirm-cancel">ביטול</button>
+        <button type="button" class="filled-btn danger" id="confirm-ok">מחיקה</button>
+      </div>
+    </div>
+  </dialog>
+
+  <div id="snackbar" role="status" aria-live="polite"></div>
+  <script src="app.js"></script>
+</body>
+</html>
