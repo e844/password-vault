@@ -92,7 +92,7 @@ class SearchAndOpsTest {
         val s = SampleData.entries()
         assertTrue(s.isNotEmpty())
         assertTrue(s.all { it.title.startsWith("דוגמה") })
-        assertTrue(s.all { it.url.isEmpty() || it.url.contains("example.com") })
+        assertTrue(s.all { it.url.isEmpty() || it.url.contains(".example") })
         assertTrue(s.all { it.password.length == 16 })
     }
 }

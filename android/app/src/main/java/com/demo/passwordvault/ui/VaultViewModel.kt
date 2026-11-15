@@ -55,6 +55,7 @@ sealed interface VaultDialog {
     data object Restore : VaultDialog
     data object ChangeMaster : VaultDialog
     data object LockSettings : VaultDialog
+    data object Update : VaultDialog
 }
 
 class VaultViewModel(app: Application) : AndroidViewModel(app) {

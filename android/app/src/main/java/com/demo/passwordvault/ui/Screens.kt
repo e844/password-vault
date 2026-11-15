@@ -320,6 +320,8 @@ private fun HomeScreen(vm: VaultViewModel, snackbar: SnackbarHostState) {
                             HorizontalDivider()
                             MenuRow(Txt.MENU_AUTOLOCK, AppIcons.Timer, "menu_autolock") { menuOpen = false; vm.showDialog(VaultDialog.LockSettings) }
                             MenuRow(Txt.MENU_CHANGE_MASTER, AppIcons.Key, "menu_master") { menuOpen = false; vm.showDialog(VaultDialog.ChangeMaster) }
+                            HorizontalDivider()
+                            MenuRow(Txt.MENU_UPDATE, AppIcons.Restore, "menu_update") { menuOpen = false; vm.showDialog(VaultDialog.Update) }
                         }
                     }
                 },
@@ -1036,6 +1038,31 @@ private fun VaultDialogs(vm: VaultViewModel) {
                     }
                 },
                 confirmButton = { TextButton(onClick = { vm.setAutoLock(choice) }, modifier = Modifier.testTag("lock_save")) { Text(Txt.SAVE) } },
+                dismissButton = { TextButton(onClick = { vm.dismissDialog() }) { Text(Txt.CANCEL) } },
+            )
+        }
+
+        VaultDialog.Update -> {
+            val context = LocalContext.current
+            AlertDialog(
+                onDismissRequest = { vm.dismissDialog() },
+                icon = { Icon(AppIcons.Restore, contentDescription = null) },
+                title = { Text(Txt.MENU_UPDATE) },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text(Txt.currentBuild(com.demo.passwordvault.BuildConfig.BUILD_NUMBER), style = MaterialTheme.typography.titleMedium)
+                        Text(Txt.UPDATE_BODY, style = MaterialTheme.typography.bodyMedium)
+                        Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.tertiaryContainer) {
+                            Text(Txt.UPDATE_WARNING, modifier = Modifier.padding(12.dp), style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onTertiaryContainer)
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { vm.dismissDialog(); openInBrowser(context, Txt.RELEASES_URL) { vm.message = it } }, modifier = Modifier.testTag("update_open")) {
+                        Text(Txt.OPEN_RELEASES)
+                    }
+                },
                 dismissButton = { TextButton(onClick = { vm.dismissDialog() }) { Text(Txt.CANCEL) } },
             )
         }

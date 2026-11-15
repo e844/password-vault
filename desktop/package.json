@@ -9,7 +9,7 @@
   "private": true,
   "scripts": {
     "start": "electron .",
-    "test": "node --test test/core.test.js test/features.test.js",
+    "test": "node --test test/core.test.js test/features.test.js test/autofill.test.js",
     "test:e2e": "node test/e2e.mjs"
   },
   "devDependencies": {

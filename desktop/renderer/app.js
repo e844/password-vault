@@ -24,6 +24,8 @@
     restore: 'M13 3a9 9 0 00-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.954 8.954 0 0013 21a9 9 0 000-18zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z',
     warning: 'M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z',
     all: 'M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z',
+    web: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z',
+    update: 'M21 10.12h-6.78l2.74-2.82c-2.73-2.7-7.15-2.8-9.88-.1a6.875 6.875 0 000 9.79 7.02 7.02 0 009.88 0C18.32 15.65 19 14.08 19 12.1h2c0 1.98-.88 4.55-2.64 6.29-3.51 3.48-9.21 3.48-12.72 0-3.5-3.47-3.53-9.11-.02-12.58a8.987 8.987 0 0112.65 0L21 3v7.12zM12.5 8v4.25l3.5 2.08-.72 1.21L11 13V8h1.5z',
     timer: 'M15 1H9v2h6V1zm-4 13h2V8h-2v6zm8.03-6.61l1.42-1.42c-.43-.51-.9-.99-1.41-1.41l-1.42 1.42A8.962 8.962 0 0012 4c-4.97 0-9 4.03-9 9s4.02 9 9 9 9-4.03 9-9c0-2.12-.74-4.07-1.97-5.61zM12 20c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z',
     folder: 'M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z',
     bank: 'M4 10v7h3v-7H4zm6 0v7h3v-7h-3zM2 22h19v-3H2v3zm14-12v7h3v-7h-3zm-4.5-9L2 6v2h19V6l-9.5-5z',
@@ -553,6 +555,25 @@
       $('restore-dialog').showModal();
       $('restore-password').focus();
     },
+    update: async () => {
+      const info = await api.updateInfo();
+      $('update-current').textContent = info.current ? `הגרסה שלך: בנייה ${info.current}` : 'הגרסה שלך: בנייה מקומית (לא מ-GitHub)';
+      $('update-status').textContent = 'בודק ב-GitHub…';
+      $('update-download').hidden = true;
+      $('update-howto').hidden = true;
+      $('update-dialog').showModal();
+      const r = await api.checkUpdate();
+      if (!r.ok) { $('update-status').textContent = 'לא ניתן להתחבר ל-GitHub כרגע. בדוק את החיבור לאינטרנט ונסה שוב.'; return; }
+      const when = r.publishedAt ? ` (${new Intl.DateTimeFormat('he-IL', { dateStyle: 'medium' }).format(new Date(r.publishedAt))})` : '';
+      if (r.newer) {
+        $('update-status').textContent = `✨ יש גרסה חדשה: בנייה ${r.latest}${when}`;
+        $('update-download').hidden = !r.download;
+        $('update-howto').hidden = false;
+      } else {
+        $('update-status').textContent = `✓ יש לך את הגרסה העדכנית ביותר (בנייה ${r.latest}${when})`;
+      }
+    },
+    browserFill: () => { $('browser-dialog').showModal(); },
     lockSettings: async () => {
       const { settings, choices } = await api.getSettings();
       const box = $('lock-choices');
@@ -595,6 +616,13 @@
     renderAll();
     snack(T.restored(r.added, r.updated));
   });
+
+  $('update-close').addEventListener('click', () => $('update-dialog').close());
+  $('update-page').addEventListener('click', () => api.openUpdate('page'));
+  $('update-download').addEventListener('click', async () => { const r = await api.openUpdate('download'); if (r.ok) snack('ההורדה נפתחה בדפדפן'); });
+  $('browser-close').addEventListener('click', () => $('browser-dialog').close());
+  $('browser-open').addEventListener('click', async () => { const r = await api.openExtensionFolder(); if (!r.ok) snack(T.errors.generic, true); });
+  $('browser-copy').addEventListener('click', async () => { await api.copyExtensionsUrl(); snack('הכתובת הועתקה – הדבק אותה בשורת הכתובת של הדפדפן'); });
 
   $('lock-cancel').addEventListener('click', () => $('lock-dialog').close());
   $('lock-settings-form').addEventListener('submit', async (ev) => {

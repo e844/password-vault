@@ -47,6 +47,29 @@ print((a[0] + a[2]) // 2, (a[1] + a[3]) // 2)
 PY
 }
 
+center_text() { # exact visible text (dialogs/menus are separate windows, without test tags)
+  dump
+  python3 - "$1" <<'PY'
+import re, sys, xml.etree.ElementTree as ET
+x = open('/tmp/ui.raw', encoding='utf-8', errors='ignore').read()
+s, e = x.find('<?xml'), x.rfind('</hierarchy>')
+if s < 0 or e < 0: sys.exit(1)
+root = ET.fromstring(x[s:e + 12])
+m = [n for n in root.iter('node') if n.get('text') == sys.argv[1]]
+if not m: sys.exit(1)
+a = list(map(int, re.findall(r'\d+', m[-1].get('bounds'))))
+print((a[0] + a[2]) // 2, (a[1] + a[3]) // 2)
+PY
+}
+
+tap_text() {
+  for _ in $(seq 1 25); do
+    if c=$(center_text "$1"); then adb shell input tap $c; sleep 1; return 0; fi
+    sleep 1
+  done
+  fail "text '$1' not found"
+}
+
 fail() { echo "FAILED: $1"; dump; head -c 4000 /tmp/ui.raw; echo; adb exec-out screencap -p > "$OUT/failure.png" || true; exit 1; }
 
 tap() {
@@ -117,7 +140,7 @@ tap e_cat_work
 tap e_generate
 expect_text "השתמש בסיסמה" "generator dialog shown"
 shot android-4-generator
-tap gen_use
+tap_text "השתמש בסיסמה"
 expect_text "חוזק: חזקה" "generated password is strong"
 shot android-5-edit
 tap save
@@ -128,10 +151,10 @@ expect_text "9 רשומות" "list has 9 entries"
 echo "== auto-lock setting =="
 tap menu
 shot android-10-menu
-tap menu_autolock
+tap_text "נעילה אוטומטית"
 expect_text "אחרי 15 דקות" "auto-lock dialog shows choices"
-tap lock_60
-tap lock_save
+tap_text "אחרי שעה"
+tap_text "שמירה"
 expect_text "שעה" "auto-lock saved"
 
 echo "== search =="
@@ -163,7 +186,7 @@ shot android-9-dark-detail
 
 echo "== delete =="
 tap delete
-tap confirm_delete
+tap_text "מחיקה"
 expect_text "8 רשומות" "entry deleted"
 
 adb shell cmd uimode night no

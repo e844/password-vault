@@ -192,16 +192,18 @@ test('sample data is fake', () => {
   assert.equal(s.length, 8);
   assert.ok(s.every((e) => e.title.startsWith('דוגמה')));
   assert.ok(s.every((e) => L.CATEGORY_KEYS.includes(e.category)));
-  assert.ok(s.every((e) => !e.url || e.url.includes('example.com')));
+  assert.ok(s.every((e) => !e.url || /\.example$/.test(new URL(e.url).hostname)));
 });
 
 test('no logging / printing in app source', () => {
-  const dirs = ['src', 'renderer'].map((d) => path.join(__dirname, '..', d));
+  const dirs = ['src', 'renderer', 'browser-extension'].map((d) => path.join(__dirname, '..', d));
   const files = dirs.flatMap((d) => fs.readdirSync(d).filter((f) => /\.(js|mjs|html)$/.test(f)).map((f) => path.join(d, f)));
   assert.ok(files.length >= 5, 'expected source files');
   for (const f of files) {
     const t = fs.readFileSync(f, 'utf8');
-    assert.doesNotMatch(t, /console\.|process\.(stdout|stderr)|\bdebugger\b|appendFile|createWriteStream/, f);
+    assert.doesNotMatch(t, /console\.|process\.stderr|\bdebugger\b|appendFile|createWriteStream/, f);
+    // stdout מותר רק ב-native-host.js – זה ערוץ התקשורת עם הדפדפן, לא לוג
+    if (!f.endsWith('native-host.js')) assert.doesNotMatch(t, /process\.stdout/, f);
   }
 });
 

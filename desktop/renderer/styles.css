@@ -342,3 +342,7 @@ input[type="range"] { width: 100%; accent-color: var(--primary); margin: 0 0 10p
 .radio-row { display: flex; align-items: center; gap: 14px; padding: 10px 8px; border-radius: 12px; cursor: pointer; }
 .radio-row:hover { background: color-mix(in srgb, var(--on-surface) 6%, transparent); }
 .radio-row input { width: 20px; height: 20px; accent-color: var(--primary); margin: 0; }
+
+.steps { margin: 6px 0 4px; padding-inline-start: 22px; line-height: 1.7; }
+.steps li { margin-bottom: 4px; }
+#browser-dialog { width: min(600px, calc(100vw - 32px)); }

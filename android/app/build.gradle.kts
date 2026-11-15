@@ -15,6 +15,8 @@ android {
         versionCode = 2
         versionName = "0.2.0"
         buildConfigField("boolean", "ALLOW_SCREENSHOTS", "false")
+        // מספר הבנייה ב-GitHub Actions (0 בבנייה מקומית) – לכפתור "בדיקת עדכונים"
+        buildConfigField("int", "BUILD_NUMBER", System.getenv("GITHUB_RUN_NUMBER") ?: "0")
     }
 
     buildTypes {

@@ -52,12 +52,15 @@ jobs:
       - run: npm ci
       - name: Unit tests
         run: npm test
+      - name: Build number
+        run: echo "{\"build\": ${{ github.run_number }}}" > build-info.json
       - name: Package
         run: >
           npx @electron/packager . PasswordVault --platform=win32 --arch=x64
           --icon=build/icon.ico --asar --out=out --overwrite
           --app-copyright="Demo" --win32metadata.ProductName="PasswordVault"
-          --ignore="^/test" --ignore="^/out" --ignore="^/README"
+          --ignore="^/test" --ignore="^/out" --ignore="^/README" --ignore="^/browser-extension"
+          --extra-resource=browser-extension
       - name: Zip
         shell: pwsh
         run: Compress-Archive -Path out/PasswordVault-win32-x64 -DestinationPath "$env:GITHUB_WORKSPACE/PasswordVault-Windows.zip"
@@ -81,6 +84,6 @@ jobs:
         run: |
           TAG="build-${{ github.run_number }}"
           gh release create "$TAG" dist/PasswordVault-Android.apk dist/PasswordVault-Windows.zip \
-            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --latest \
             --title "גרסת בדיקה #${{ github.run_number }}" \
-            --notes "גרסת בדיקה עם נתוני דוגמה בלבד. Android: PasswordVault-Android.apk · Windows: PasswordVault-Windows.zip (לחלץ ולהפעיל PasswordVault.exe)."
+            --notes "גרסת בדיקה עם נתוני דוגמה בלבד. Android: PasswordVault-Android.apk · Windows: PasswordVault-Windows.zip (לחלץ ולהפעיל PasswordVault.exe). תוסף לדפדפן: בתוך ה-ZIP, בתיקייה resources/browser-extension."

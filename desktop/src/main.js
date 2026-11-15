@@ -5,6 +5,9 @@ const path = require('node:path');
 const V = require('./vault');
 const L = require('./logic');
 const C = require('./csv');
+const { startBridge } = require('./bridge');
+const { registerNativeHost, EXTENSION_ID } = require('./register-host');
+const U = require('./update');
 
 // מאפשר לבדיקות להשתמש בתיקיית נתונים נפרדת
 if (process.env.PV_USER_DATA) app.setPath('userData', process.env.PV_USER_DATA);
@@ -67,6 +70,11 @@ function createWindow() {
 }
 
 let pendingRestore = null;
+let bridge = null;
+
+const extensionDir = () => (app.isPackaged
+  ? path.join(process.resourcesPath, 'browser-extension')
+  : path.join(__dirname, '..', 'browser-extension'));
 
 // ---------- חלונות קבצים (בבדיקות אוטומטיות: נתיבים קבועים במקום חלון) ----------
 const TEST_DIR = process.env.PV_TEST_DIALOG_DIR || null;
@@ -304,6 +312,38 @@ handle('restoreApply', async (password) => {
   } finally { busy = false; }
 });
 
+// ---------- עדכונים (GitHub Releases) ----------
+let lastUpdate = null;
+handle('updateInfo', () => ({ current: U.currentBuild(), page: U.RELEASES_PAGE }));
+handle('checkUpdate', async () => {
+  if (TEST_DIR) {
+    lastUpdate = U.summarize(JSON.parse(process.env.PV_TEST_RELEASE || '{}'), U.currentBuild());
+    return { ok: true, ...lastUpdate };
+  }
+  try {
+    lastUpdate = await U.checkForUpdate();
+    return { ok: true, ...lastUpdate };
+  } catch {
+    return { error: 'offline' };
+  }
+});
+handle('openUpdate', async (kind) => {
+  const url = kind === 'download' ? lastUpdate?.download : (lastUpdate?.page || U.RELEASES_PAGE);
+  if (!U.isRepoUrl(url)) return { error: 'generic' };
+  if (TEST_DIR) { globalThis.pvLastExternalUrl = url; return { ok: true }; }
+  await shell.openExternal(url);
+  return { ok: true };
+});
+
+// ---------- מילוי אוטומטי בדפדפן ----------
+handle('browserInfo', () => ({ extensionId: EXTENSION_ID, folder: extensionDir() }));
+handle('openExtensionFolder', async () => {
+  if (TEST_DIR) return { ok: true };
+  const err = await shell.openPath(extensionDir());
+  return err ? { error: 'generic' } : { ok: true };
+});
+handle('copyExtensionsUrl', async () => { await clipboard.writeText('chrome://extensions'); return { ok: true }; });
+
 // ---------- החלפת סיסמת מאסטר ----------
 handle('changeMaster', async (current, next, confirm) => {
   requireVault();
@@ -338,6 +378,22 @@ app.whenReady().then(() => {
 
   createWindow();
 
+  // מילוי אוטומטי בדפדפן: גשר מקומי + רישום ה-Native messaging host
+  bridge = startBridge(app.getPath('userData'), {
+    getVault: () => vault,
+    focusWindow: () => {
+      if (!win) return;
+      if (win.isMinimized()) win.restore();
+      win.show();
+      win.focus();
+    },
+    onFilled: () => policy.onInteraction(now()),
+  });
+  try {
+    const extra = process.env.PV_TEST_NM_DIR ? process.env.PV_TEST_NM_DIR.split(path.delimiter) : [];
+    registerNativeHost(app.getPath('userData'), process.execPath, extra);
+  } catch { /* בלי מילוי בדפדפן – שאר התוכנה עובדת */ }
+
   setInterval(() => { if (vault && policy.shouldLock(now())) lock(true); }, 1000);
   powerMonitor.on('lock-screen', () => lock(true));
   powerMonitor.on('suspend', () => lock(true));
@@ -357,6 +413,7 @@ app.on('before-quit', (ev) => {
   if (quitting) return;
   ev.preventDefault();
   quitting = true;
+  if (bridge) bridge.close();
   Promise.resolve(lock(false)).finally(() => app.quit());
 });
 app.on('window-all-closed', () => app.quit());

@@ -47,6 +47,8 @@
       <div class="menu-wrap">
         <button id="menu-btn" class="icon-btn" title="עוד" aria-label="עוד" aria-haspopup="menu"><span data-icon="more"></span></button>
         <div id="menu" class="menu" role="menu" hidden>
+          <button role="menuitem" data-action="browserFill"><span data-icon="web"></span>מילוי אוטומטי בדפדפן</button>
+          <hr>
           <button role="menuitem" data-action="importCsv"><span data-icon="upload"></span>ייבוא מהדפדפן (CSV)</button>
           <button role="menuitem" data-action="exportCsv"><span data-icon="download"></span>ייצוא לדפדפן (CSV)</button>
           <hr>
@@ -55,6 +57,8 @@
           <hr>
           <button role="menuitem" data-action="lockSettings"><span data-icon="timer"></span>נעילה אוטומטית</button>
           <button role="menuitem" data-action="changeMaster"><span data-icon="key"></span>החלפת סיסמת מאסטר</button>
+          <hr>
+          <button role="menuitem" data-action="update"><span data-icon="update"></span>בדיקת עדכונים</button>
         </div>
       </div>
     </header>
@@ -215,6 +219,42 @@
         <button type="submit" class="filled-btn" id="lock-ok">שמירה</button>
       </div>
     </form>
+  </dialog>
+
+  <!-- ===== עדכונים ===== -->
+  <dialog id="update-dialog">
+    <div>
+      <h2>בדיקת עדכונים</h2>
+      <p id="update-current" class="muted"></p>
+      <p id="update-status" role="status"></p>
+      <div id="update-howto" class="banner" hidden>אחרי ההורדה: סגור את התוכנה, חלץ את קובץ ה-ZIP החדש והפעל את PasswordVault.exe מהתיקייה החדשה. הכספת שלך נשמרת בנפרד ולא תימחק. מומלץ ליצור קודם גיבוי מוצפן.</div>
+      <p class="muted small-text">הבדיקה מתחברת ל-GitHub רק כשלוחצים על הכפתור. שום מידע מהכספת לא נשלח.</p>
+      <div class="dialog-actions">
+        <button type="button" class="text-btn" id="update-close">סגירה</button>
+        <button type="button" class="outlined-btn" id="update-page">דף הגרסאות</button>
+        <button type="button" class="filled-btn" id="update-download" hidden>הורדת העדכון</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- ===== מילוי אוטומטי בדפדפן ===== -->
+  <dialog id="browser-dialog">
+    <div>
+      <h2>מילוי אוטומטי בדפדפן</h2>
+      <p class="muted">תוסף קטן ל-Chrome / Edge / Brave ממלא שם משתמש וסיסמה באתרים. הוא מדבר רק עם התוכנה הזו במחשב – בלי אינטרנט – וממלא רק באתר שהכתובת שלו תואמת לרשומה.</p>
+      <ol class="steps">
+        <li>לחץ <b>פתח את תיקיית התוסף</b> (נפתחת תיקייה בשם browser-extension).</li>
+        <li>בדפדפן פתח את <b dir="ltr">chrome://extensions</b> (ב-Edge: <b dir="ltr">edge://extensions</b>). אפשר ללחוץ <b>העתק כתובת</b> ולהדביק בשורת הכתובת.</li>
+        <li>הפעל את <b>Developer mode / מצב מפתח</b> (מתג בפינה).</li>
+        <li>לחץ <b>Load unpacked / טען פריט לא ארוז</b> ובחר את תיקיית browser-extension.</li>
+        <li>זהו. כשתיכנס לשדה התחברות באתר, תופיע רשימה קטנה מתחת לשדה. הכספת צריכה להיות פתוחה בתוכנה.</li>
+      </ol>
+      <div class="dialog-actions">
+        <button type="button" class="text-btn" id="browser-close">סגירה</button>
+        <button type="button" class="outlined-btn" id="browser-copy">העתק כתובת</button>
+        <button type="button" class="filled-btn" id="browser-open">פתח את תיקיית התוסף</button>
+      </div>
+    </div>
   </dialog>
 
   <div id="snackbar" role="status" aria-live="polite"></div>

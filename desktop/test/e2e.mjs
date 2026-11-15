@@ -20,7 +20,12 @@ const step = async (name, fn) => { await fn(); results.push(name); process.stdou
 async function launch(extraEnv = {}) {
   const app = await electron.launch({
     args: ['--no-sandbox', root],
-    env: { ...process.env, PV_USER_DATA: userData, PV_TEST_DIALOG_DIR: filesDir, PV_TEST_OPEN_FILE: openFile, ...extraEnv },
+    env: {
+      ...process.env, PV_USER_DATA: userData, PV_TEST_DIALOG_DIR: filesDir, PV_TEST_OPEN_FILE: openFile,
+      PV_TEST_RELEASE: JSON.stringify({ tag_name: 'build-99', published_at: '2026-11-15T20:00:00Z', html_url: 'https://github.com/e844/password-vault/releases/tag/build-99',
+        assets: [{ name: 'PasswordVault-Windows.zip', browser_download_url: 'https://github.com/e844/password-vault/releases/download/build-99/PasswordVault-Windows.zip' }] }),
+      ...extraEnv,
+    },
   });
   const page = await app.firstWindow();
   await page.waitForSelector('#lock-view:not([hidden])');
@@ -124,7 +129,7 @@ await step('open website in default browser', async () => {
   await page.click('#entries .entry >> nth=0');
   await page.click('#open-url');
   await snackHas(page, 'נפתח');
-  assert.equal(await app.evaluate(() => globalThis.pvLastExternalUrl), 'https://bank.example.com/');
+  assert.equal(await app.evaluate(() => globalThis.pvLastExternalUrl), 'https://demo-bank.example/');
   await page.click('#cats .chip >> nth=0');
 });
 
@@ -255,6 +260,23 @@ await step('auto-lock setting can be changed (default 15 minutes)', async () => 
   await page.click('#lock-ok');
   await snackHas(page, 'שעה');
   assert.equal(JSON.parse(fs.readFileSync(path.join(userData, 'settings.json'), 'utf8')).autoLockMinutes, 60);
+});
+
+await step('update check finds a newer GitHub release and opens the download', async () => {
+  await menu(page, 'update');
+  await page.waitForFunction(() => document.querySelector('#update-status').textContent.includes('בנייה 99'));
+  assert.equal(await page.isVisible('#update-download'), true);
+  await shot(page, '9-update.png');
+  await page.click('#update-download');
+  assert.equal(await app.evaluate(() => globalThis.pvLastExternalUrl), 'https://github.com/e844/password-vault/releases/download/build-99/PasswordVault-Windows.zip');
+  await page.click('#update-close');
+});
+
+await step('browser autofill setup dialog', async () => {
+  await menu(page, 'browserFill');
+  await page.waitForSelector('#browser-dialog[open]');
+  await page.click('#browser-open');
+  await page.click('#browser-close');
 });
 
 await step('change master password', async () => {

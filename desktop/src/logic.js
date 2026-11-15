@@ -122,14 +122,14 @@ function guessCategory(title, url) {
 function sampleEntries() {
   const pw = () => generatePassword({ length: 16 });
   return [
-    { title: 'דוגמה – דואר אלקטרוני', username: 'dana.demo@example.com', password: pw(), url: 'https://mail.example.com', notes: 'חשבון דוגמה', category: 'email' },
-    { title: 'דוגמה – בנק', username: 'demo-user-1234', password: pw(), url: 'https://bank.example.com', notes: 'לא חשבון אמיתי', category: 'banking' },
-    { title: 'דוגמה – רשת חברתית', username: '@demo_user', password: pw(), url: 'https://social.example.com', notes: '', category: 'social' },
-    { title: 'דוגמה – חנות מקוונת', username: 'shopper@example.com', password: pw(), url: 'https://shop.example.com', notes: 'מספר לקוח: 000000', category: 'shopping' },
+    { title: 'דוגמה – דואר אלקטרוני', username: 'dana.demo@example.com', password: pw(), url: 'https://demo-mail.example', notes: 'חשבון דוגמה', category: 'email' },
+    { title: 'דוגמה – בנק', username: 'demo-user-1234', password: pw(), url: 'https://demo-bank.example', notes: 'לא חשבון אמיתי', category: 'banking' },
+    { title: 'דוגמה – רשת חברתית', username: '@demo_user', password: pw(), url: 'https://demo-social.example', notes: '', category: 'social' },
+    { title: 'דוגמה – חנות מקוונת', username: 'shopper@example.com', password: pw(), url: 'https://demo-shop.example', notes: 'מספר לקוח: 000000', category: 'shopping' },
     { title: 'דוגמה – Wi-Fi בבית', username: '', password: pw(), url: '', notes: 'שם רשת: Demo-WiFi', category: 'home' },
-    { title: 'דוגמה – מערכת בעבודה', username: 'd.demo', password: pw(), url: 'https://work.example.com', notes: '', category: 'work' },
-    { title: 'דוגמה – אתר טורנטים', username: 'seeder_demo', password: pw(), url: 'https://tracker.example.com', notes: 'יחס שיתוף: 1.0 (מומצא)', category: 'torrents' },
-    { title: 'דוגמה – סטרימינג', username: 'family@example.com', password: pw(), url: 'https://tv.example.com', notes: 'חשבון משפחתי', category: 'entertainment' },
+    { title: 'דוגמה – מערכת בעבודה', username: 'd.demo', password: pw(), url: 'https://demo-work.example', notes: '', category: 'work' },
+    { title: 'דוגמה – אתר טורנטים', username: 'seeder_demo', password: pw(), url: 'https://demo-tracker.example', notes: 'יחס שיתוף: 1.0 (מומצא)', category: 'torrents' },
+    { title: 'דוגמה – סטרימינג', username: 'family@example.com', password: pw(), url: 'https://demo-tv.example', notes: 'חשבון משפחתי', category: 'entertainment' },
   ].map((e) => ({ id: crypto.randomUUID(), updatedAt: Date.now(), ...e }));
 }
 

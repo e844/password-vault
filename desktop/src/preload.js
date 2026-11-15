@@ -24,6 +24,12 @@ contextBridge.exposeInMainWorld('vault', {
   changeMaster: (current, next, confirm) => ipcRenderer.invoke('changeMaster', current, next, confirm),
   getSettings: () => ipcRenderer.invoke('getSettings'),
   setSettings: (s) => ipcRenderer.invoke('setSettings', s),
+  browserInfo: () => ipcRenderer.invoke('browserInfo'),
+  openExtensionFolder: () => ipcRenderer.invoke('openExtensionFolder'),
+  copyExtensionsUrl: () => ipcRenderer.invoke('copyExtensionsUrl'),
+  updateInfo: () => ipcRenderer.invoke('updateInfo'),
+  checkUpdate: () => ipcRenderer.invoke('checkUpdate'),
+  openUpdate: (kind) => ipcRenderer.invoke('openUpdate', kind),
   activity: () => ipcRenderer.send('activity'),
   onLocked: (cb) => ipcRenderer.on('locked', (_e, info) => cb(info)),
 });

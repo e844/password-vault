@@ -8,6 +8,8 @@ android/.idea/
 # Desktop
 desktop/node_modules/
 desktop/out/
+desktop/build-info.json
 # OS
 .DS_Store
 Thumbs.db
+build-info.json
