@@ -57,21 +57,23 @@ tap() {
   fail "element '$1' not found"
 }
 
-type_in() { tap "$1"; adb shell input text "${2// /%s}"; sleep 0.7; }
+type_in() { tap "$1"; sleep 0.5; adb shell input text "${2// /%s}"; sleep 0.7; hide_keyboard; }
 
 expect_text() {
   for _ in $(seq 1 40); do dump; grep -q "$1" /tmp/ui.raw && { echo "  ✓ $2"; return 0; }; sleep 1; done
   fail "text not found: $1 ($2)"
 }
 
-shot() { sleep 1.5; adb exec-out screencap -p > "$OUT/$1.png"; echo "  📷 $1"; }
+hide_keyboard() {
+  if adb shell dumpsys input_method | grep -q "mInputShown=true"; then adb shell input keyevent 4; sleep 1; fi
+}
+
+shot() { hide_keyboard; sleep 1.5; adb exec-out screencap -p > "$OUT/$1.png"; echo "  📷 $1"; }
 
 echo "== setup =="
 adb shell settings put global window_animation_scale 0
 adb shell settings put global transition_animation_scale 0
 adb shell settings put global animator_duration_scale 0
-# בלי מקלדת על המסך, כדי שלא תסתיר את הצילומים (הקלדה דרך adb עובדת גם בלעדיה)
-for ime in $(adb shell ime list -s | tr -d '\r'); do adb shell ime disable "$ime" >/dev/null || true; done
 adb shell cmd uimode night no
 sleep 20 # לתת לאמולטור להתייצב אחרי האתחול
 adb install -r "$APK"
