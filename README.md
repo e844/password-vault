@@ -67,7 +67,20 @@
 
 ## 📱 גרסת אנדרואיד
 
-<!-- ANDROID_SCREENSHOTS -->
+<p align="center">
+  <img src="docs/screenshots/android-2-list.png" width="24%" alt="רשימת רשומות">
+  <img src="docs/screenshots/android-3-detail.png" width="24%" alt="פרטי רשומה">
+  <img src="docs/screenshots/android-4-generator.png" width="24%" alt="מחולל סיסמאות">
+  <img src="docs/screenshots/android-8-dark-list.png" width="24%" alt="מצב כהה">
+</p>
+<p align="center">
+  <img src="docs/screenshots/android-1-setup.png" width="24%" alt="יצירת כספת">
+  <img src="docs/screenshots/android-2b-category.png" width="24%" alt="סינון לפי קטגוריה">
+  <img src="docs/screenshots/android-10-menu.png" width="24%" alt="תפריט">
+  <img src="docs/screenshots/android-7-locked.png" width="24%" alt="כספת נעולה">
+</p>
+
+> צילומי המסך האלה נוצרים אוטומטית בכל בנייה, מבדיקת ממשק אמיתית על אמולטור אנדרואיד.
 
 **מה יש בה:** כל מה שיש במחשב (קטגוריות, מחולל, ייבוא וייצוא, גיבוי ושחזור, החלפת סיסמת מאסטר, נעילה אוטומטית), ובנוסף:
 - **מילוי אוטומטי באפליקציות ובאתרים.** האפליקציה נרשמת כשירות המילוי האוטומטי של אנדרואיד. מפעילים אותה מהתפריט ⋮ ← **הפעלת מילוי אוטומטי**, ובוחרים "כספת סיסמאות". ב-Chrome צריך גם להפעיל בהגדרות: *Autofill services* ← *Autofill using another service*.
