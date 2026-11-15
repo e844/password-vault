@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalMaterial3Api::class)
+@file:OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 
 package com.demo.passwordvault.ui
 
@@ -76,6 +76,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -108,6 +112,8 @@ fun VaultApp(vm: VaultViewModel) {
             vm.message = null
         }
     }
+    // testTag-ים חשופים כ-resource-id לבדיקות אוטומטיות וצילומי מסך
+    Box(Modifier.fillMaxSize().semantics { testTagsAsResourceId = true }) {
     Crossfade(targetState = vm.screen, label = "screen") { s ->
         when (s) {
             Screen.Setup -> LockScreen(vm, setup = true, snackbar = snackbar)
@@ -117,6 +123,7 @@ fun VaultApp(vm: VaultViewModel) {
             is Screen.Edit -> EditScreen(vm, s.id, snackbar)
             Screen.Generator -> GeneratorScreen(vm, snackbar)
         }
+    }
     }
 }
 
@@ -184,6 +191,7 @@ private fun LockScreen(vm: VaultViewModel, setup: Boolean, snackbar: SnackbarHos
                 imeAction = if (setup) ImeAction.Next else ImeAction.Done,
                 onDone = submit,
                 isError = vm.error != null,
+                tag = "master",
             )
             if (setup) {
                 Spacer(Modifier.height(12.dp))
@@ -196,6 +204,7 @@ private fun LockScreen(vm: VaultViewModel, setup: Boolean, snackbar: SnackbarHos
                     imeAction = ImeAction.Done,
                     onDone = submit,
                     isError = vm.error != null,
+                    tag = "confirm",
                 )
                 Spacer(Modifier.height(8.dp))
                 StrengthMeter(password)
@@ -208,7 +217,7 @@ private fun LockScreen(vm: VaultViewModel, setup: Boolean, snackbar: SnackbarHos
             Button(
                 onClick = submit,
                 enabled = !vm.busy && password.isNotEmpty(),
-                modifier = Modifier.fillMaxWidth().height(56.dp),
+                modifier = Modifier.fillMaxWidth().height(56.dp).testTag("submit"),
             ) {
                 if (vm.busy) {
                     CircularProgressIndicator(
@@ -248,7 +257,7 @@ private fun HomeScreen(vm: VaultViewModel, snackbar: SnackbarHostState) {
             LargeTopAppBar(
                 title = { Text(Txt.APP_NAME) },
                 actions = {
-                    IconButton(onClick = { vm.lock() }) { Icon(Icons.Filled.Lock, contentDescription = Txt.LOCK) }
+                    IconButton(onClick = { vm.lock() }, modifier = Modifier.testTag("lock")) { Icon(Icons.Filled.Lock, contentDescription = Txt.LOCK) }
                 },
                 scrollBehavior = scroll,
             )
@@ -256,6 +265,7 @@ private fun HomeScreen(vm: VaultViewModel, snackbar: SnackbarHostState) {
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = { vm.openNew() },
+                modifier = Modifier.testTag("fab"),
                 icon = { Icon(Icons.Filled.Add, contentDescription = null) },
                 text = { Text(Txt.ADD) },
             )
@@ -271,7 +281,7 @@ private fun HomeScreen(vm: VaultViewModel, snackbar: SnackbarHostState) {
                 TextField(
                     value = vm.query,
                     onValueChange = { vm.query = it },
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).testTag("search"),
                     placeholder = { Text(Txt.SEARCH) },
                     leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
                     trailingIcon = if (vm.query.isNotEmpty()) {
@@ -294,6 +304,7 @@ private fun HomeScreen(vm: VaultViewModel, snackbar: SnackbarHostState) {
                 ) {
                     AssistChip(
                         onClick = { vm.openGenerator() },
+                        modifier = Modifier.testTag("open_generator"),
                         label = { Text(Txt.GENERATOR) },
                         leadingIcon = {
                             Icon(Icons.Filled.Refresh, contentDescription = null, modifier = Modifier.size(AssistChipDefaults.IconSize))
@@ -327,7 +338,7 @@ private fun HomeScreen(vm: VaultViewModel, snackbar: SnackbarHostState) {
 private fun EntryRow(e: VaultEntry, onClick: () -> Unit) {
     Card(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).testTag("entry"),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
     ) {
@@ -373,13 +384,13 @@ private fun DetailScreen(vm: VaultViewModel, id: String, snackbar: SnackbarHostS
             TopAppBar(
                 title = { Text(e.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 navigationIcon = {
-                    IconButton(onClick = { vm.back() }) {
+                    IconButton(onClick = { vm.back() }, modifier = Modifier.testTag("back")) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = Txt.BACK)
                     }
                 },
                 actions = {
-                    IconButton(onClick = { vm.openEdit(e.id) }) { Icon(Icons.Filled.Edit, contentDescription = Txt.EDIT) }
-                    IconButton(onClick = { confirmDelete = true }) { Icon(Icons.Filled.Delete, contentDescription = Txt.DELETE) }
+                    IconButton(onClick = { vm.openEdit(e.id) }, modifier = Modifier.testTag("edit")) { Icon(Icons.Filled.Edit, contentDescription = Txt.EDIT) }
+                    IconButton(onClick = { confirmDelete = true }, modifier = Modifier.testTag("delete")) { Icon(Icons.Filled.Delete, contentDescription = Txt.DELETE) }
                 },
             )
         },
@@ -403,7 +414,7 @@ private fun DetailScreen(vm: VaultViewModel, id: String, snackbar: SnackbarHostS
                 monospace = showPassword,
                 hidden = e.password.isEmpty(),
             ) {
-                TextButton(onClick = { showPassword = !showPassword }) { Text(if (showPassword) Txt.HIDE else Txt.SHOW) }
+                TextButton(onClick = { showPassword = !showPassword }, modifier = Modifier.testTag("reveal")) { Text(if (showPassword) Txt.HIDE else Txt.SHOW) }
                 TextButton(onClick = { vm.copyToClipboard(Txt.PASSWORD, e.password) }) { Text(Txt.COPY) }
             }
             if (e.password.isNotEmpty()) StrengthMeter(e.password)
@@ -427,7 +438,7 @@ private fun DetailScreen(vm: VaultViewModel, id: String, snackbar: SnackbarHostS
             title = { Text(Txt.DELETE_TITLE) },
             text = { Text(Txt.deleteBody(e.title)) },
             confirmButton = {
-                TextButton(onClick = { confirmDelete = false; vm.delete(e.id) }) {
+                TextButton(onClick = { confirmDelete = false; vm.delete(e.id) }, modifier = Modifier.testTag("confirm_delete")) {
                     Text(Txt.DELETE, color = MaterialTheme.colorScheme.error)
                 }
             },
@@ -488,7 +499,7 @@ private fun EditScreen(vm: VaultViewModel, id: String?, snackbar: SnackbarHostSt
                     IconButton(onClick = { vm.back() }) { Icon(Icons.Filled.Close, contentDescription = Txt.CANCEL) }
                 },
                 actions = {
-                    Button(onClick = { vm.saveDraft() }, modifier = Modifier.padding(end = 8.dp)) { Text(Txt.SAVE) }
+                    Button(onClick = { vm.saveDraft() }, modifier = Modifier.padding(end = 8.dp).testTag("save")) { Text(Txt.SAVE) }
                 },
             )
         },
@@ -512,7 +523,7 @@ private fun EditScreen(vm: VaultViewModel, id: String?, snackbar: SnackbarHostSt
                 isError = titleError,
                 supportingText = if (titleError) { { Text(Txt.ERR_TITLE_REQUIRED) } } else null,
                 shape = RoundedCornerShape(16.dp),
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().testTag("e_title"),
             )
             OutlinedTextField(
                 value = d.username,
@@ -522,7 +533,7 @@ private fun EditScreen(vm: VaultViewModel, id: String?, snackbar: SnackbarHostSt
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
                 textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Ltr),
                 shape = RoundedCornerShape(16.dp),
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().testTag("e_username"),
             )
             SecretField(
                 value = d.password,
@@ -530,9 +541,10 @@ private fun EditScreen(vm: VaultViewModel, id: String?, snackbar: SnackbarHostSt
                 label = Txt.PASSWORD,
                 visible = showPassword,
                 onToggle = { showPassword = !showPassword },
+                tag = "e_password",
             )
             StrengthMeter(d.password)
-            FilledTonalButton(onClick = { vm.regenerate(); showGenerator = true }) {
+            FilledTonalButton(onClick = { vm.regenerate(); showGenerator = true }, modifier = Modifier.testTag("e_generate")) {
                 Icon(Icons.Filled.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
                 Text(Txt.GENERATE)
@@ -566,6 +578,7 @@ private fun EditScreen(vm: VaultViewModel, id: String?, snackbar: SnackbarHostSt
             text = { GeneratorPanel(vm, showCopy = false, modifier = Modifier.verticalScroll(rememberScrollState())) },
             confirmButton = {
                 TextButton(
+                    modifier = Modifier.testTag("gen_use"),
                     enabled = vm.generated.isNotEmpty(),
                     onClick = {
                         vm.draft = vm.draft?.copy(password = vm.generated)
@@ -689,11 +702,12 @@ private fun SecretField(
     imeAction: ImeAction = ImeAction.Next,
     onDone: () -> Unit = {},
     isError: Boolean = false,
+    tag: String = "",
 ) {
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().testTag(tag),
         label = { Text(label) },
         singleLine = true,
         isError = isError,

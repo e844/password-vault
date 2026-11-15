@@ -14,9 +14,17 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "0.1.0"
+        buildConfigField("boolean", "ALLOW_SCREENSHOTS", "false")
     }
 
     buildTypes {
+        // גרסה לצילומי מסך לתיעוד בלבד: זהה ל-debug, אבל בלי חסימת צילום מסך
+        create("screenshot") {
+            initWith(getByName("debug"))
+            applicationIdSuffix = ".screenshot"
+            buildConfigField("boolean", "ALLOW_SCREENSHOTS", "true")
+            matchingFallbacks += listOf("debug")
+        }
         release {
             isMinifyEnabled = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
@@ -31,6 +39,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     testOptions {
         unitTests.isReturnDefaultValues = false
