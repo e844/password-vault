@@ -229,7 +229,8 @@ test('Windows: native host launcher works from a folder with a Hebrew name', { s
   // כמו שהדפדפן מפעיל: cmd.exe /d /c "<host.bat>" עם צינורות stdin/stdout
   const reply = await new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error('timeout')), 15000);
-    const p = spawn('cmd.exe', ['/d', '/s', '/c', `"${launcher}" chrome-extension://${EXTENSION_ID}/`], {
+    // בדיוק כמו Chromium (native_process_launcher_win.cc): cmd /d /s /c ""<bat>" <args>"
+    const p = spawn('cmd.exe', ['/d', '/s', '/c', `""${launcher}" chrome-extension://${EXTENSION_ID}/ --parent-window=0"`], {
       windowsVerbatimArguments: true, stdio: ['pipe', 'pipe', 'inherit'],
     });
     let out = Buffer.alloc(0);
