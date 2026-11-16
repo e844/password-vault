@@ -1,5 +1,5 @@
 'use strict';
-const { app, BrowserWindow, ipcMain, clipboard, powerMonitor, session, Menu, nativeTheme, systemPreferences, dialog, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, clipboard, powerMonitor, session, Menu, nativeTheme, systemPreferences, dialog, shell, nativeImage } = require('electron');
 const fs = require('node:fs');
 const path = require('node:path');
 const V = require('./vault');
@@ -325,6 +325,38 @@ handle('restoreApply', async (password) => {
     if (e instanceof V.CorruptVaultError) return { error: 'corrupt' };
     return { error: 'generic' };
   } finally { busy = false; }
+});
+
+// ---------- התאמה אישית: תמונת רקע (נשמרת רק במחשב, בתיקיית הנתונים) ----------
+const photoFile = () => path.join(app.getPath('userData'), 'appearance', 'background.jpg');
+
+function appearance() {
+  let photo = null;
+  try { photo = `data:image/jpeg;base64,${fs.readFileSync(photoFile()).toString('base64')}`; } catch { /* אין תמונה */ }
+  return { photo, colorsFromPhoto: settings.colorsFromPhoto };
+}
+
+handle('appearanceGet', () => appearance());
+handle('appearancePick', async () => {
+  const file = await pickOpenPath('בחירת תמונה', [{ name: 'תמונות', extensions: ['jpg', 'jpeg', 'png', 'webp', 'bmp', 'gif'] }]);
+  if (!file) return { canceled: true };
+  if (fs.statSync(file).size > 40 * 1024 * 1024) return { error: 'tooBig' };
+  let img = nativeImage.createFromBuffer(fs.readFileSync(file));
+  if (img.isEmpty()) return { error: 'notImage' };
+  const { width, height } = img.getSize();
+  const max = 1920;
+  if (width > max || height > max) img = width >= height ? img.resize({ width: max, quality: 'best' }) : img.resize({ height: max, quality: 'best' });
+  fs.mkdirSync(path.dirname(photoFile()), { recursive: true });
+  fs.writeFileSync(photoFile(), img.toJPEG(86));
+  return { ok: true, ...appearance() };
+});
+handle('appearanceRemove', () => {
+  try { fs.unlinkSync(photoFile()); } catch { /* כבר אין */ }
+  return { ok: true, ...appearance() };
+});
+handle('appearanceColors', (on) => {
+  settings = S.save(app.getPath('userData'), { ...settings, colorsFromPhoto: !!on });
+  return { ok: true, ...appearance() };
 });
 
 // ---------- עדכונים (GitHub Releases) ----------

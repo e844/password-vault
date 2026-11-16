@@ -9,7 +9,11 @@ import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.foundation.Image
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -178,17 +182,40 @@ private fun LockScreen(vm: VaultViewModel, setup: Boolean, snackbar: SnackbarHos
         Unit
     }
 
-    Scaffold(snackbarHost = { SnackbarHost(snackbar) }) { padding ->
+    val photo = vm.photo
+    Box(Modifier.fillMaxSize()) {
+    if (photo != null) {
+        Image(photo, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.10f), Color.Black.copy(alpha = 0.50f)))))
+    }
+    Scaffold(
+        containerColor = if (photo != null) Color.Transparent else MaterialTheme.colorScheme.background,
+        snackbarHost = { SnackbarHost(snackbar) },
+    ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
                 .imePadding()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp),
+                .padding(horizontal = 20.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Spacer(Modifier.height(72.dp))
+        Spacer(Modifier.height(if (photo != null) 48.dp else 0.dp))
+        // עם תמונה: התוכן בכרטיס חצי-שקוף מעל התמונה
+        Column(
+            modifier = if (photo != null) {
+                Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(32.dp))
+                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.88f))
+                    .padding(horizontal = 20.dp)
+            } else {
+                Modifier.fillMaxWidth().padding(horizontal = 4.dp)
+            },
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Spacer(Modifier.height(if (photo != null) 28.dp else 72.dp))
             Surface(
                 shape = CircleShape,
                 color = MaterialTheme.colorScheme.primaryContainer,
@@ -276,6 +303,9 @@ private fun LockScreen(vm: VaultViewModel, setup: Boolean, snackbar: SnackbarHos
             }
             Spacer(Modifier.height(24.dp))
         }
+        Spacer(Modifier.height(24.dp))
+        }
+    }
     }
 }
 
@@ -296,7 +326,7 @@ private fun HomeScreen(vm: VaultViewModel, snackbar: SnackbarHostState) {
         modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
         topBar = {
             LargeTopAppBar(
-                title = { Text(Txt.APP_NAME) },
+                title = { if (vm.photo == null) Text(Txt.APP_NAME) },
                 actions = {
                     IconButton(onClick = { vm.lock() }, modifier = Modifier.testTag("lock")) { Icon(Icons.Filled.Lock, contentDescription = Txt.LOCK) }
                     Box {
@@ -318,6 +348,7 @@ private fun HomeScreen(vm: VaultViewModel, snackbar: SnackbarHostState) {
                             MenuRow(Txt.MENU_BACKUP, AppIcons.Save, "menu_backup") { menuOpen = false; backupLauncher.launch(vm.backupFileName()) }
                             MenuRow(Txt.MENU_RESTORE, AppIcons.Restore, "menu_restore") { menuOpen = false; restoreLauncher.launch(arrayOf("*/*")) }
                             HorizontalDivider()
+                            MenuRow(Txt.MENU_APPEARANCE, AppIcons.Palette, "menu_appearance") { menuOpen = false; vm.showDialog(VaultDialog.Appearance) }
                             MenuRow(Txt.MENU_AUTOLOCK, AppIcons.Timer, "menu_autolock") { menuOpen = false; vm.showDialog(VaultDialog.LockSettings) }
                             MenuRow(Txt.MENU_CHANGE_MASTER, AppIcons.Key, "menu_master") { menuOpen = false; vm.showDialog(VaultDialog.ChangeMaster) }
                             HorizontalDivider()
@@ -343,6 +374,27 @@ private fun HomeScreen(vm: VaultViewModel, snackbar: SnackbarHostState) {
             contentPadding = padding,
             modifier = Modifier.fillMaxSize(),
         ) {
+            vm.photo?.let { photo ->
+                item(key = "hero") {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                            .height(170.dp)
+                            .clip(RoundedCornerShape(28.dp)),
+                    ) {
+                        Image(photo, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.62f)))))
+                        Column(Modifier.align(Alignment.BottomStart).padding(18.dp)) {
+                            Text(Txt.APP_NAME, style = MaterialTheme.typography.headlineMedium, color = Color.White)
+                            Text(
+                                Txt.greeting(java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)),
+                                style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(alpha = 0.9f),
+                            )
+                        }
+                    }
+                }
+            }
             item(key = "search") {
                 TextField(
                     value = vm.query,
@@ -1038,6 +1090,38 @@ private fun VaultDialogs(vm: VaultViewModel) {
                     }
                 },
                 confirmButton = { TextButton(onClick = { vm.setAutoLock(choice) }, modifier = Modifier.testTag("lock_save")) { Text(Txt.SAVE) } },
+                dismissButton = { TextButton(onClick = { vm.dismissDialog() }) { Text(Txt.CANCEL) } },
+            )
+        }
+
+        VaultDialog.Appearance -> {
+            val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> uri?.let(vm::setPhoto) }
+            AlertDialog(
+                onDismissRequest = { vm.dismissDialog() },
+                icon = { Icon(AppIcons.Palette, contentDescription = null) },
+                title = { Text(Txt.MENU_APPEARANCE) },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Box(
+                            modifier = Modifier.fillMaxWidth().height(160.dp).clip(RoundedCornerShape(20.dp))
+                                .background(MaterialTheme.colorScheme.surfaceContainerHighest),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            val p = vm.photo
+                            if (p != null) Image(p, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                            else Text(Txt.PHOTO_NONE, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Text(Txt.PHOTO_NOTE, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        if (vm.photo != null) {
+                            OutlinedButton(onClick = { vm.removePhoto() }, modifier = Modifier.fillMaxWidth()) { Text(Txt.PHOTO_REMOVE) }
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                    }) { Text(Txt.PHOTO_PICK) }
+                },
                 dismissButton = { TextButton(onClick = { vm.dismissDialog() }) { Text(Txt.CANCEL) } },
             )
         }

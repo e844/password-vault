@@ -279,6 +279,20 @@ await step('browser autofill setup dialog', async () => {
   await page.click('#browser-close');
 });
 
+await step('personal background photo + colors from photo', async () => {
+  fs.copyFileSync('/tmp/sample-photo.jpg', openFile);
+  const before = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--h').trim());
+  await menu(page, 'appearance');
+  await page.waitForSelector('#appearance-dialog[open]');
+  await page.click('#photo-pick');
+  await snackHas(page, 'התמונה נשמרה');
+  assert.ok(fs.existsSync(path.join(userData, 'appearance', 'background.jpg')));
+  assert.equal(await page.evaluate(() => document.body.classList.contains('has-photo')), true);
+  await page.waitForFunction((b) => getComputedStyle(document.documentElement).getPropertyValue('--h').trim() !== b, before);
+  await page.click('#appearance-close');
+  await shot(page, '10-photo-main.png');
+});
+
 await step('change master password', async () => {
   await menu(page, 'changeMaster');
   await page.fill('#m-current', 'not-it');
@@ -298,7 +312,7 @@ await step('manual lock clears the screen and clipboard', async () => {
   assert.equal(await page.locator('#entries .entry').count(), 0);
   await page.waitForTimeout(500);
   assert.equal(await app.evaluate(async ({ clipboard }) => await clipboard.readText()), '');
-  await shot(page, '7-locked.png');
+  await shot(page, '7-locked.png'); // עם תמונת הרקע
 });
 
 await step('old master password no longer works', async () => {

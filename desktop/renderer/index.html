@@ -40,7 +40,7 @@
   <!-- ===== מסך ראשי ===== -->
   <div id="main-view" class="view" hidden>
     <header class="app-bar">
-      <h1>כספת סיסמאות</h1>
+      <div class="hero-text"><h1>כספת סיסמאות</h1><span id="hero-sub"></span></div>
       <div class="spacer"></div>
       <button id="open-generator" class="tonal-btn"><span data-icon="key"></span>מחולל סיסמאות</button>
       <button id="lock-btn" class="icon-btn" title="נעילה (Ctrl+L)" aria-label="נעילה"><span data-icon="lock"></span></button>
@@ -55,6 +55,7 @@
           <button role="menuitem" data-action="backup"><span data-icon="save"></span>גיבוי מוצפן</button>
           <button role="menuitem" data-action="restore"><span data-icon="restore"></span>שחזור מגיבוי</button>
           <hr>
+          <button role="menuitem" data-action="appearance"><span data-icon="palette"></span>התאמה אישית ותמונה</button>
           <button role="menuitem" data-action="lockSettings"><span data-icon="timer"></span>נעילה אוטומטית</button>
           <button role="menuitem" data-action="changeMaster"><span data-icon="key"></span>החלפת סיסמת מאסטר</button>
           <hr>
@@ -219,6 +220,21 @@
         <button type="submit" class="filled-btn" id="lock-ok">שמירה</button>
       </div>
     </form>
+  </dialog>
+
+  <!-- ===== התאמה אישית ===== -->
+  <dialog id="appearance-dialog">
+    <div>
+      <h2>התאמה אישית</h2>
+      <div id="photo-preview" class="photo-preview"><span class="muted">עדיין לא נבחרה תמונה</span></div>
+      <p class="muted small-text">התמונה מופיעה ברקע מסך הפתיחה ובכותרת. היא נשמרת רק במחשב הזה ולא נשלחת לשום מקום. שים לב: מסך הפתיחה גלוי גם כשהכספת נעולה.</p>
+      <label class="switch-row"><span>צבעי האפליקציה לפי התמונה</span><input type="checkbox" class="switch" id="photo-colors"></label>
+      <div class="dialog-actions">
+        <button type="button" class="text-btn" id="appearance-close">סגירה</button>
+        <button type="button" class="outlined-btn" id="photo-remove">הסרת התמונה</button>
+        <button type="button" class="filled-btn" id="photo-pick">בחירת תמונה</button>
+      </div>
+    </div>
   </dialog>
 
   <!-- ===== עדכונים ===== -->
