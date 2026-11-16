@@ -338,6 +338,13 @@ private fun HomeScreen(vm: VaultViewModel, snackbar: SnackbarHostState) {
                                 menuOpen = false
                                 enableAutofill(context) { vm.message = it }
                             }
+                            DropdownMenuItem(
+                                text = { Text(Txt.MENU_AUTOFILL_ON_LOAD) },
+                                onClick = { vm.toggleAutofillOnLoad() },
+                                leadingIcon = { Icon(AppIcons.Key, contentDescription = null) },
+                                trailingIcon = { Switch(checked = vm.autofillOnLoad, onCheckedChange = { vm.toggleAutofillOnLoad() }) },
+                                modifier = Modifier.testTag("menu_autofill_on_load"),
+                            )
                             HorizontalDivider()
                             MenuRow(Txt.MENU_IMPORT, AppIcons.Upload, "menu_import") {
                                 menuOpen = false

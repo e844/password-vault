@@ -42,6 +42,22 @@ object AutofillMatch {
             .any { hay.contains(it) }
     }
 
+    /** התאמה מדויקת: אותו שם מארח בדיוק (בלי www) – לא רק אותו דומיין בסיס. */
+    fun exactHostMatch(entryUrl: String, webDomain: String): Boolean {
+        val a = hostOf(entryUrl) ?: return false
+        val b = hostOf(webDomain) ?: return false
+        return a == b
+    }
+
+    /**
+     * "מילוי אוטומטי בטעינת דף": רק באתר (לא באפליקציה), רק רשומות עם אותו שם מארח בדיוק.
+     * רשומה אחת → מוצעת לבד, במגע אחד. כמה → בחירה. אף אחת → ההתנהגות הרגילה.
+     */
+    fun exactForPage(entries: List<VaultEntry>, webDomain: String?): List<VaultEntry> {
+        if (webDomain.isNullOrBlank()) return emptyList()
+        return entries.filter { exactHostMatch(it.url, webDomain) }.sortedBy { it.title.lowercase(Locale.ROOT) }
+    }
+
     /**
      * רשומות מתאימות. באתר (webDomain) – לפי דומיין בלבד, כדי לא למלא סיסמה של אתר אחד באתר אחר.
      * באפליקציה – לפי שם החבילה (למשל com.facebook.orca ↔ facebook.com).

@@ -90,6 +90,7 @@ class VaultViewModel(app: Application) : AndroidViewModel(app) {
     var dialog by mutableStateOf<VaultDialog?>(null)
     var dialogError by mutableStateOf<String?>(null)
     var autoLockMinutes by mutableStateOf(AutoLockPolicy.DEFAULT_MINUTES)
+    var autofillOnLoad by mutableStateOf(false)
         private set
 
     /** טיוטת עריכה – בזיכרון בלבד, שורדת סיבוב מסך. */
@@ -111,6 +112,7 @@ class VaultViewModel(app: Application) : AndroidViewModel(app) {
         autoLockMinutes = prefs.getInt("autoLockMinutes", AutoLockPolicy.DEFAULT_MINUTES)
             .takeIf { it in AutoLockPolicy.CHOICES_MINUTES } ?: AutoLockPolicy.DEFAULT_MINUTES
         policy.setMinutes(autoLockMinutes)
+        autofillOnLoad = prefs.getBoolean(VaultHolder.PREF_AUTOFILL_ON_LOAD, false)
         regenerate()
         viewModelScope.launch {
             photo = withContext(Dispatchers.IO) {
@@ -434,6 +436,12 @@ class VaultViewModel(app: Application) : AndroidViewModel(app) {
                 busy = false
             }
         }
+    }
+
+    fun toggleAutofillOnLoad() {
+        autofillOnLoad = !autofillOnLoad
+        prefs.edit().putBoolean(VaultHolder.PREF_AUTOFILL_ON_LOAD, autofillOnLoad).apply()
+        message = if (autofillOnLoad) Txt.AUTOFILL_ON_LOAD_ON else Txt.AUTOFILL_ON_LOAD_OFF
     }
 
     fun setAutoLock(minutes: Int) {

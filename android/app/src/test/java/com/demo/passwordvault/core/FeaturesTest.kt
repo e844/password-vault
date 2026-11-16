@@ -154,6 +154,17 @@ class AutofillMatchTest {
     private val noUrl = VaultEntry(title = "Wi-Fi", username = "", password = "p")
     private val all = listOf(bank, google, fb, noUrl)
 
+    @Test fun exactForPageOnlySameHost() {
+        val bank2 = VaultEntry(title = "בנק 2", url = "leumi.co.il", username = "u2", password = "p")
+        val hb = VaultEntry(title = "HB", url = "https://hb2.leumi.co.il", username = "h", password = "p")
+        val list = listOf(bank, bank2, hb, google, noUrl)
+        assertEquals(listOf("h"), AutofillMatch.exactForPage(list, "hb2.leumi.co.il").map { it.username })
+        assertEquals(setOf("u", "u2"), AutofillMatch.exactForPage(list, "www.leumi.co.il").map { it.username }.toSet())
+        assertEquals(emptyList<VaultEntry>(), AutofillMatch.exactForPage(list, "leumi.co.il.evil.example"))
+        assertEquals(emptyList<VaultEntry>(), AutofillMatch.exactForPage(list, null)) // אפליקציה – לא
+        assertEquals(3, AutofillMatch.matches(list, "hb2.leumi.co.il", "").size) // הרשימה הרגילה – כל האתר
+    }
+
     @Test fun baseDomain() {
         assertEquals("leumi.co.il", AutofillMatch.baseDomain("hb2.leumi.co.il"))
         assertEquals("google.com", AutofillMatch.baseDomain("accounts.google.com"))

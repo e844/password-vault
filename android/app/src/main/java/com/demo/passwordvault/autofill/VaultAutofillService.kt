@@ -49,7 +49,17 @@ class VaultAutofillService : AutofillService() {
 
         val response = FillResponse.Builder()
         val session = VaultHolder.session
-        if (session != null && !session.isLocked) {
+        val exact = if (session != null && !session.isLocked && VaultHolder.autofillOnLoad(this)) {
+            AutofillMatch.exactForPage(session.entries, fields.webDomain)
+        } else emptyList()
+        if (exact.isNotEmpty()) {
+            // מילוי מהיר: רק החשבונות של האתר הזה בדיוק. אחד → מגע אחד ממלא. כמה → בחירה.
+            // (אנדרואיד לא מאפשר לשירות למלא בלי מגע של המשתמש, ולוחצים "התחבר" לבד.)
+            if (exact.size > 1 && Build.VERSION.SDK_INT >= 28) {
+                response.setHeader(presentation(this, getString(R.string.app_name), com.demo.passwordvault.ui.Txt.AUTOFILL_CHOOSE))
+            }
+            exact.take(5).forEach { e -> response.addDataset(datasetFor(this, e, fields)) }
+        } else if (session != null && !session.isLocked) {
             AutofillMatch.matches(session.entries, fields.webDomain, fields.packageName).take(5).forEach { e ->
                 response.addDataset(datasetFor(this, e, fields))
             }
