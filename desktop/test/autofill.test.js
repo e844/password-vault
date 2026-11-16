@@ -242,7 +242,7 @@ test('Windows: native host launcher works from a folder with a Hebrew name', { s
     });
     p.stdin.end(frame({ type: 'query', url: 'https://www.leumi.co.il/' }));
   });
-  assert.deepEqual(reply, { ok: true, locked: false, autoFill: false, matches: [{ id: 'b', title: 'בנק', username: 'u', exact: false }] });
+  assert.deepEqual(reply, { ok: true, locked: false, autoFill: false, matches: [{ id: 'b', title: 'בנק', username: 'u', exact: true }] });
   // הרצה שנייה (התוכנה נפתחת שוב): הקיצור מתעדכן ולא נמחקת שום תיקייה אמיתית
   registerNativeHost(dataDir, exe, []);
   assert.ok(fs.existsSync(exe));
