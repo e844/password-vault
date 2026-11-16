@@ -172,7 +172,8 @@ test('save from browser: new, same, update, locked, invalid', async () => {
 test('browser-tab copy of the UI is up to date (run scripts/sync-extension-ui.js)', () => {
   const { build, dst } = require('../scripts/sync-extension-ui');
   for (const [name, content] of Object.entries(build())) {
-    assert.equal(fs.readFileSync(path.join(dst, name), 'utf8'), content, `browser-extension/vault/${name} is stale`);
+    const lf = (t) => t.replace(/\r\n/g, '\n'); // ב-Windows git ממיר סופי שורות
+    assert.equal(lf(fs.readFileSync(path.join(dst, name), 'utf8')), lf(content), `browser-extension/vault/${name} is stale`);
   }
   const html = fs.readFileSync(path.join(dst, 'index.html'), 'utf8');
   assert.ok(html.indexOf('vault-api.js') < html.indexOf('app.js'));
