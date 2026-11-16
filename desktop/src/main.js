@@ -12,7 +12,16 @@ const U = require('./update');
 // מאפשר לבדיקות להשתמש בתיקיית נתונים נפרדת
 if (process.env.PV_USER_DATA) app.setPath('userData', process.env.PV_USER_DATA);
 
-if (!app.requestSingleInstanceLock()) app.quit();
+// אם התוכנה כבר פתוחה – המופע החדש רק מבקש מהקיים להציג את החלון, ויוצא מיד
+if (!app.requestSingleInstanceLock()) {
+  app.exit(0);
+  process.exit(0);
+}
+
+// שגיאה לא צפויה בתהליך הראשי: מציגים הודעה במקום להיעלם בשקט (בלי מידע מהכספת)
+process.on('uncaughtException', (e) => {
+  try { dialog.showErrorBox('כספת סיסמאות – שגיאה', String((e && e.stack) || e)); } catch { /* ignore */ }
+});
 
 const store = new V.VaultStore(path.join(app.getPath('userData'), 'vault.bin'));
 const S = require('./settings');
@@ -58,6 +67,12 @@ function createWindow() {
   // חוסם צילום מסך והקלטה של החלון (Windows)
   win.setContentProtection(true);
   win.once('ready-to-show', () => win.show());
+  // רשת ביטחון: אם מסיבה כלשהי "מוכן להצגה" לא הגיע – מציגים בכל זאת
+  win.webContents.once('did-finish-load', () => { if (win && !win.isVisible()) win.show(); });
+  setTimeout(() => { if (win && !win.isDestroyed() && !win.isVisible()) win.show(); }, 2500);
+  win.webContents.on('render-process-gone', () => {
+    if (win && !win.isDestroyed()) { lock(false); win.reload(); }
+  });
   win.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
 
   win.on('minimize', () => vault && policy.onBackground(now()));
@@ -381,12 +396,7 @@ app.whenReady().then(() => {
   // מילוי אוטומטי בדפדפן: גשר מקומי + רישום ה-Native messaging host
   bridge = startBridge(app.getPath('userData'), {
     getVault: () => vault,
-    focusWindow: () => {
-      if (!win) return;
-      if (win.isMinimized()) win.restore();
-      win.show();
-      win.focus();
-    },
+    focusWindow: () => showWindow(),
     onFilled: () => policy.onInteraction(now()),
   });
   try {
@@ -404,9 +414,14 @@ app.on('web-contents-created', (_e, contents) => {
   contents.setWindowOpenHandler(() => ({ action: 'deny' }));
 });
 
-app.on('second-instance', () => {
-  if (win) { if (win.isMinimized()) win.restore(); win.focus(); }
-});
+function showWindow() {
+  if (!win || win.isDestroyed()) { createWindow(); return; }
+  if (win.isMinimized()) win.restore();
+  win.show();
+  win.focus();
+}
+
+app.on('second-instance', () => { if (app.isReady()) showWindow(); });
 
 let quitting = false;
 app.on('before-quit', (ev) => {
