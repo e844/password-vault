@@ -72,12 +72,21 @@ function startBridge(userDataDir, hooks) {
       case 'ping':
         return { ok: true, locked: !vault };
       case 'query': {
-        if (!M.isFillablePage(msg.url)) return { ok: true, locked: !vault, matches: [] };
-        if (!vault) return { ok: true, locked: true, matches: [] };
+        const autoFill = !!(hooks.getPrefs && hooks.getPrefs().autofillOnLoad);
+        if (!M.isFillablePage(msg.url)) return { ok: true, locked: !vault, autoFill, matches: [] };
+        if (!vault) return { ok: true, locked: true, autoFill, matches: [] };
+        // בלי סיסמאות – רק מה שצריך כדי להציג רשימה. exact = אותו שם מארח בדיוק (למילוי בטעינת דף)
         const matches = M.matchesFor(vault.entries, msg.url).slice(0, 8)
-          .map((e) => ({ id: e.id, title: e.title, username: e.username }));
-        return { ok: true, locked: false, matches };
+          .map((e) => ({ id: e.id, title: e.title, username: e.username, exact: M.exactHostMatch(e.url, msg.url) }));
+        return { ok: true, locked: false, autoFill, matches };
       }
+      // הגדרות התוסף (לא סודיות) נשמרות בתוכנה, לא באחסון של התוסף
+      case 'getPrefs':
+        return { ok: true, autofillOnLoad: !!(hooks.getPrefs && hooks.getPrefs().autofillOnLoad) };
+      case 'setPrefs':
+        if (!hooks.setPrefs || typeof msg.value !== 'boolean') return { error: 'bad' };
+        hooks.setPrefs({ autofillOnLoad: msg.value });
+        return { ok: true, autofillOnLoad: msg.value };
       case 'fill': {
         if (!vault) return { ok: false, locked: true };
         const e = vault.entries.find((x) => x.id === msg.id);

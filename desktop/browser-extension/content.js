@@ -41,10 +41,10 @@
     return before.find(isUsername) || before.find((i) => ['text', 'email', 'tel'].includes(i.type)) || null;
   }
 
-  const setValue = (el, v) => {
+  const setValue = (el, v, focus = true) => {
     if (!el) return;
     const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
-    el.focus();
+    if (focus) el.focus();
     setter.call(el, v);
     el.dispatchEvent(new Event('input', { bubbles: true }));
     el.dispatchEvent(new Event('change', { bubbles: true }));
@@ -62,10 +62,11 @@
   let current = null;
   function close() { if (host) { host.remove(); host = null; current = null; } }
 
-  function show(anchor, build) {
+  function show(anchor, build, mark = 'list') {
     close();
     current = anchor;
     host = document.createElement('div');
+    host.setAttribute('data-pv-list', mark); // לזיהוי בבדיקות; בלי פרטים אישיים
     host.style.cssText = 'position:absolute;z-index:2147483647;top:0;left:0;';
     const root = host.attachShadow({ mode: 'closed' });
     const style = document.createElement('style');
@@ -149,6 +150,57 @@
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); }, true);
   document.addEventListener('input', (e) => { if (host && e.target === current) close(); }, true);
   window.addEventListener('resize', close);
+
+  // ================= מילוי אוטומטי בטעינת דף =================
+  // פועל רק כשהמתג בחלון התוסף פעיל, רק בדף הראשי (לא במסגרות מוטמעות), רק ב-https,
+  // רק כשהכספת פתוחה, ורק לרשומה עם אותו שם מארח בדיוק. לא לוחץ "התחבר" – זה נשאר למשתמש.
+  const A = { choose: 'בחר חשבון למילוי' };
+  let autoDone = false;
+  const untouched = (pw, user) => !pw.value && !(user && user.value);
+
+  async function autoFillOnLoad() {
+    if (autoDone) return;
+    const pw = passwordFields()[0];
+    if (!pw) return;
+    autoDone = true;
+    const r = await ask({ type: 'query' });
+    if (!r || r.error || r.locked || !r.autoFill || !Array.isArray(r.matches)) return;
+    const exact = r.matches.filter((m) => m.exact);
+    if (!exact.length) return;
+    const user = usernameFor(pw);
+    if (!pw.isConnected || !untouched(pw, user)) return; // המשתמש כבר התחיל להקליד – לא נוגעים
+
+    if (exact.length === 1) {
+      const f = await ask({ type: 'fill', id: exact[0].id });
+      if (!f.ok || !pw.isConnected || !untouched(pw, user)) return;
+      if (user && f.username) setValue(user, f.username, false);
+      setValue(pw, f.password, false);
+      pw.setAttribute('data-pv-autofilled', ''); // לזיהוי בבדיקות; בלי פרטים אישיים
+      return;
+    }
+    // כמה חשבונות לאותו אתר – מציגים בחירה ולא ממלאים לבד
+    const anchor = user || pw;
+    show(anchor, (box) => {
+      const d = document.createElement('div'); d.className = 'msg'; d.textContent = A.choose; box.appendChild(d);
+      for (const m of exact) {
+        item(box, m.title, m.username, async () => {
+          const f = await ask({ type: 'fill', id: m.id });
+          close();
+          if (f.ok) { fill(f.username, f.password, pw); pw.setAttribute('data-pv-autofilled', ''); }
+        });
+      }
+    }, 'choose');
+  }
+
+  if (window.top === window && location.protocol === 'https:') {
+    autoFillOnLoad();
+    // טפסים שנבנים אחרי הטעינה (אתרים דינמיים) – מחכים להם עד 10 שניות
+    if (!autoDone) {
+      const mo = new MutationObserver(() => { if (passwordFields().length) { mo.disconnect(); autoFillOnLoad(); } });
+      mo.observe(document.documentElement, { childList: true, subtree: true });
+      setTimeout(() => mo.disconnect(), 10000);
+    }
+  }
 
   // ================= הצעה לשמור פרטי כניסה חדשים =================
   // הסיסמה נשלחת לתוסף רק כשהטופס נשלח, והתוכנה שומרת רק אחרי לחיצה על "שמור" / "עדכן".

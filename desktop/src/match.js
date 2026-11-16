@@ -39,9 +39,16 @@ function isFillablePage(pageUrl) {
   }
 }
 
+/** התאמה מדויקת: אותו שם מארח בדיוק (בלי www), לא רק אותו דומיין בסיס. משמש למילוי בטעינת דף. */
+function exactHostMatch(entryUrl, pageUrl) {
+  const a = hostOf(entryUrl);
+  const b = hostOf(pageUrl);
+  return !!a && !!b && a === b;
+}
+
 function matchesFor(entries, pageUrl) {
   if (!isFillablePage(pageUrl)) return [];
   return entries.filter((e) => domainMatches(e.url, pageUrl)).sort((a, b) => a.title.localeCompare(b.title, 'he'));
 }
 
-module.exports = { hostOf, baseDomain, domainMatches, matchesFor, isFillablePage };
+module.exports = { hostOf, baseDomain, domainMatches, exactHostMatch, matchesFor, isFillablePage };

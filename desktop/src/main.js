@@ -437,6 +437,8 @@ app.whenReady().then(() => {
       if (win) win.webContents.send('entriesChanged', { source: 'browser' });
     },
     ipc: callIpc,
+    getPrefs: () => ({ autofillOnLoad: settings.autofillOnLoad }),
+    setPrefs: (p) => { settings = S.save(app.getPath('userData'), { ...settings, autofillOnLoad: !!p.autofillOnLoad }); },
   });
   try {
     const extra = process.env.PV_TEST_NM_DIR ? process.env.PV_TEST_NM_DIR.split(path.delimiter) : [];

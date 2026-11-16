@@ -55,7 +55,7 @@ test('bridge + native host: query, fill, domain check, locked, not running', asy
   await new Promise((r) => setTimeout(r, 100));
 
   const q = await viaHost(dir, { type: 'query', url: 'https://hb2.leumi.co.il/login' });
-  assert.deepEqual(q, { ok: true, locked: false, matches: [{ id: 'b', title: 'בנק', username: 'u' }] });
+  assert.deepEqual(q, { ok: true, locked: false, autoFill: false, matches: [{ id: 'b', title: 'בנק', username: 'u', exact: false }] });
   assert.equal(JSON.stringify(q).includes('BankPass'), false); // query לא מחזיר סיסמאות
 
   assert.deepEqual(await viaHost(dir, { type: 'fill', id: 'b', url: 'https://leumi.co.il/' }), { ok: true, username: 'u', password: 'BankPass!' });
@@ -66,7 +66,7 @@ test('bridge + native host: query, fill, domain check, locked, not running', asy
   assert.equal(focused, 1);
 
   vault = null;
-  assert.deepEqual(await viaHost(dir, { type: 'query', url: 'https://leumi.co.il' }), { ok: true, locked: true, matches: [] });
+  assert.deepEqual(await viaHost(dir, { type: 'query', url: 'https://leumi.co.il' }), { ok: true, locked: true, autoFill: false, matches: [] });
   assert.deepEqual(await viaHost(dir, { type: 'fill', id: 'b', url: 'https://leumi.co.il' }), { ok: false, locked: true });
 
   b.close();
@@ -169,6 +169,38 @@ test('save from browser: new, same, update, locked, invalid', async () => {
   b.close();
 });
 
+test('autofill on page load: off by default, exact host only, setting stored in the app', async () => {
+  const S = require('../src/settings');
+  assert.equal(S.DEFAULTS.autofillOnLoad, false);
+  assert.equal(S.sanitize({ autofillOnLoad: 'yes' }).autofillOnLoad, false);
+  assert.equal(S.sanitize({ autofillOnLoad: true }).autofillOnLoad, true);
+  assert.ok(M.exactHostMatch('https://www.leumi.co.il/login', 'https://leumi.co.il/x'));
+  assert.ok(!M.exactHostMatch('https://www.leumi.co.il/login', 'https://hb2.leumi.co.il/x'));
+  assert.ok(!M.exactHostMatch('https://leumi.co.il', 'https://leumi.co.il.evil.example'));
+
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pv-af-'));
+  let prefs = { autofillOnLoad: false };
+  let vault = { entries: [bank, { ...bank, id: 'b2', username: 'u2' }, { id: 'h', title: 'HB', url: 'https://hb2.leumi.co.il', username: 'h', password: 'H!' }] };
+  const b = startBridge(dir, { getVault: () => vault, focusWindow: () => {}, getPrefs: () => prefs, setPrefs: (p) => { prefs = { ...prefs, ...p }; } });
+  await new Promise((r) => setTimeout(r, 100));
+
+  assert.deepEqual(await viaHost(dir, { type: 'getPrefs' }), { ok: true, autofillOnLoad: false });
+  assert.deepEqual(await viaHost(dir, { type: 'setPrefs', value: 'x' }), { error: 'bad' });
+  assert.deepEqual(await viaHost(dir, { type: 'setPrefs', value: true }), { ok: true, autofillOnLoad: true });
+  assert.equal(prefs.autofillOnLoad, true);
+
+  const q = await viaHost(dir, { type: 'query', url: 'https://hb2.leumi.co.il/login' });
+  assert.equal(q.autoFill, true);
+  assert.deepEqual(q.matches.filter((m) => m.exact).map((m) => m.id), ['h']); // רק אותו מארח בדיוק
+  assert.equal(q.matches.length, 3); // ברשימה הידנית – כל האתר
+  assert.ok(q.matches.every((m) => !('password' in m)));
+  const q2 = await viaHost(dir, { type: 'query', url: 'https://www.leumi.co.il/' });
+  assert.deepEqual(q2.matches.filter((m) => m.exact).map((m) => m.id).sort(), ['b', 'b2']); // שני חשבונות → בחירה
+  vault = null;
+  assert.deepEqual(await viaHost(dir, { type: 'query', url: 'https://www.leumi.co.il/' }), { ok: true, locked: true, autoFill: true, matches: [] });
+  b.close();
+});
+
 test('browser-tab copy of the UI is up to date (run scripts/sync-extension-ui.js)', () => {
   const { build, dst } = require('../scripts/sync-extension-ui');
   for (const [name, content] of Object.entries(build())) {
@@ -206,6 +238,6 @@ test('Windows: native host launcher works from a folder with a Hebrew name', { s
     });
     p.stdin.end(frame({ type: 'query', url: 'https://www.leumi.co.il/' }));
   });
-  assert.deepEqual(reply, { ok: true, locked: false, matches: [{ id: 'b', title: 'בנק', username: 'u' }] });
+  assert.deepEqual(reply, { ok: true, locked: false, autoFill: false, matches: [{ id: 'b', title: 'בנק', username: 'u', exact: false }] });
   b.close();
 });

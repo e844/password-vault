@@ -7,6 +7,18 @@ $('open-tab').addEventListener('click', async () => {
   window.close();
 });
 
+// מתג "מילוי אוטומטי בטעינת דף" – ההגדרה נשמרת בתוכנה במחשב
+(async () => {
+  const r = await ask({ type: 'getPrefs' });
+  if (!r || !r.ok) return; // התוכנה סגורה / לא מחוברת – לא מציגים מתג
+  $('auto').checked = !!r.autofillOnLoad;
+  $('auto-row').hidden = false;
+  $('auto').addEventListener('change', async () => {
+    const w = await ask({ type: 'setPrefs', value: $('auto').checked });
+    if (!w || !w.ok) $('auto').checked = !$('auto').checked;
+  });
+})();
+
 (async () => {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   const url = tab && tab.url ? tab.url : '';

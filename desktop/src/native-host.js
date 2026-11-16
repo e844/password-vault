@@ -69,7 +69,7 @@ process.stdin.on('data', async (chunk) => {
     if (!msg || typeof msg.type !== 'string') { send({ error: 'bad' }); continue; }
     pending++;
     // מעבירים רק שדות ידועים. הסיסמה עוברת בזיכרון בלבד (stdin → צינור מקומי) ולא נכתבת לשום מקום.
-    let reply = await askApp({ type: msg.type, url: msg.url, id: msg.id, username: msg.username, password: msg.password, channel: msg.channel, args: msg.args });
+    let reply = await askApp({ type: msg.type, url: msg.url, id: msg.id, username: msg.username, password: msg.password, channel: msg.channel, args: msg.args, value: msg.value });
     if (reply.error === 'notRunning' && msg.type === 'focus') reply = launchApp() ? { ok: true, launched: true } : reply;
     send(reply);
     pending--;

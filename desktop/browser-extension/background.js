@@ -47,9 +47,16 @@ const publicInfo = (p) => ({ show: true, state: p.state, host: hostOf(p.url), us
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   // הכתובת נלקחת מהדפדפן (sender.url של המסגרת), לא מהדף – כך דף לא יכול להתחזות לאתר אחר.
-  const fromPopup = !sender.tab && sender.url && sender.url.startsWith(`chrome-extension://${chrome.runtime.id}/`);
+  // דף של התוסף עצמו (החלון הקופץ). סקריפט בתוך אתר תמיד מגיע עם כתובת האתר, לא עם כתובת התוסף.
+  const fromPopup = sender.id === chrome.runtime.id && typeof sender.url === 'string' && sender.url.startsWith(`chrome-extension://${chrome.runtime.id}/popup.html`);
   const url = fromPopup ? msg.url : sender.url;
   const tabId = sender.tab ? sender.tab.id : null;
+  // הגדרות התוסף (מתג "מילוי אוטומטי בטעינת דף") – רק מחלון התוסף; נשמרות בתוכנה, לא בתוסף
+  if (msg.type === 'getPrefs' || msg.type === 'setPrefs') {
+    if (!fromPopup) { sendResponse({ error: 'forbidden' }); return false; }
+    native(msg.type === 'setPrefs' ? { type: 'setPrefs', value: !!msg.value } : { type: 'getPrefs' }).then(sendResponse);
+    return true;
+  }
   if (!url && msg.type !== 'ipc') { sendResponse({ error: 'bad' }); return false; }
   sweep();
 

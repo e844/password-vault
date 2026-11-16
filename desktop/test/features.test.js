@@ -131,7 +131,7 @@ test('vault payload is the shared JSON format (same as Android)', async () => {
 test('auto-lock settings: default 15 minutes, saved, invalid values ignored', () => {
   const S = require('../src/settings');
   const d = tmpDir();
-  assert.deepEqual(S.load(d), { autoLockMinutes: 15 });
+  assert.deepEqual(S.load(d), { autoLockMinutes: 15, autofillOnLoad: false });
   S.save(d, { autoLockMinutes: 60 });
   assert.equal(S.load(d).autoLockMinutes, 60);
   S.save(d, { autoLockMinutes: 7 });

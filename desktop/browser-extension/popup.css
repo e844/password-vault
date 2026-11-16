@@ -16,3 +16,18 @@ h1 { font-size: 17px; font-weight: 500; margin: 0; }
 }
 .filled { border: none; border-radius: 999px; padding: 10px 20px; background: #3f5f90; color: #fff; font: inherit; font-weight: 500; cursor: pointer; width: 100%; margin-top: 8px; }
 @media (prefers-color-scheme: dark) { .filled { background: #a9c7ff; color: #07305f; } }
+.switch-row { display: flex; align-items: center; gap: 12px; background: #eef1f9; border-radius: 16px; padding: 10px 14px; margin: 4px 0 10px; cursor: pointer; }
+.switch-row[hidden] { display: none; }
+.switch-row span { flex: 1; }
+.switch-row b { display: block; font-weight: 600; }
+.switch-row small { display: block; color: #5a5f69; font-size: 12px; margin-top: 2px; }
+.switch-row input { appearance: none; width: 44px; height: 26px; border-radius: 999px; background: #c4c6d0; position: relative; cursor: pointer; flex: none; transition: background .2s; margin: 0; }
+.switch-row input::after { content: ""; position: absolute; top: 4px; right: 4px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: right .2s cubic-bezier(.2,0,0,1); }
+.switch-row input:checked { background: #3f5f90; }
+.switch-row input:checked::after { right: 22px; }
+.switch-row input:focus-visible { outline: 2px solid #3f5f90; outline-offset: 2px; }
+@media (prefers-color-scheme: dark) {
+  .switch-row { background: #1e2129; } .switch-row small { color: #a9adb7; }
+  .switch-row input { background: #44474f; } .switch-row input:checked { background: #a9c7ff; }
+  .switch-row input:checked::after { background: #07305f; }
+}
