@@ -188,3 +188,30 @@ class AutofillMatchTest {
         assertTrue(AutofillMatch.matches(all, null, "com.unknown.thing").isEmpty())
     }
 }
+
+class UnlockWindowTest {
+    private val min = 60_000L
+
+    @Test fun staysOpenWhileUsedAndClosesAfterTheChosenTime() {
+        val w = UnlockWindow()
+        assertEquals(false, w.expired(0, 15)) // סגורה – אין מה לנעול
+        w.opened(0)
+        assertEquals(false, w.expired(14 * min, 15))
+        w.touch(14 * min) // מילוי בטופס מאריך
+        assertEquals(false, w.expired(28 * min, 15))
+        assertEquals(true, w.expired(29 * min, 15))
+        assertEquals(true, w.expired(16 * min, 1)) // דקה אחת מהשימוש האחרון (14)
+    }
+
+    @Test fun screenOffLocksOnlyInPhoneLockMode() {
+        val w = UnlockWindow()
+        w.opened(0)
+        assertEquals(false, w.lockOnScreenOff(15))
+        assertEquals(true, w.lockOnScreenOff(0))
+        assertEquals(false, w.expired(Long.MAX_VALUE / 2, 0)) // 0 = בלי הגבלת זמן
+        w.close()
+        assertEquals(false, w.lockOnScreenOff(0))
+        w.touch(5) // אחרי סגירה לא נפתחת מחדש
+        assertEquals(false, w.isOpen)
+    }
+}

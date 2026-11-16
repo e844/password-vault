@@ -114,6 +114,7 @@ class VaultViewModel(app: Application) : AndroidViewModel(app) {
         policy.setMinutes(autoLockMinutes)
         autofillOnLoad = prefs.getBoolean(VaultHolder.PREF_AUTOFILL_ON_LOAD, false)
         regenerate()
+        VaultHolder.current(app)?.let { opened(it) } // כבר פתוחה (מהמילוי האוטומטי או מפתיחה קודמת)
         viewModelScope.launch {
             photo = withContext(Dispatchers.IO) {
                 try { BitmapFactory.decodeFile(photoFile.path)?.asImageBitmap() } catch (e: Exception) { null }
@@ -122,7 +123,9 @@ class VaultViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             while (isActive) {
                 delay(1_000)
-                if (session != null && policy.shouldLock(now())) lock(auto = true)
+                // נועלים כשהזמן עבר (מהשימוש האחרון – באפליקציה או במילוי), או כשהכספת ננעלה מבחוץ
+                val s = session
+                if (s != null && VaultHolder.current(getApplication()) !== s) lock(auto = true)
             }
         }
     }
@@ -130,11 +133,19 @@ class VaultViewModel(app: Application) : AndroidViewModel(app) {
     private fun now() = SystemClock.elapsedRealtime()
 
     // ---------- מחזור חיים ----------
-    fun onUserInteraction() = policy.onInteraction(now())
+    fun onUserInteraction() {
+        policy.onInteraction(now())
+        if (session != null) VaultHolder.touch()
+    }
     fun onBackground() { if (session != null) policy.onBackground(now()) }
-    fun onForeground() { if (session != null && policy.onForeground(now())) lock(auto = true) }
-    /** המסך כבה / הטלפון ננעל – נועלים תמיד. */
-    fun onScreenOff() { if (session != null) lock(auto = true) }
+    fun onForeground() {
+        val s = session
+        val shared = VaultHolder.current(getApplication())
+        if (s != null && shared !== s) lock(auto = true)
+        else if (s == null && shared != null && screen == Screen.Locked) opened(shared) // נפתחה מתוך המילוי האוטומטי
+    }
+    /** המסך כבה: במצב "רק בנעילת הטלפון" נועלים מיד; אחרת – לפי הזמן שנבחר. */
+    fun onScreenOff() { if (session != null && autoLockMinutes == 0) lock(auto = true) }
 
     // ---------- יצירה / פתיחה / נעילה ----------
     fun createVault(password: String, confirm: String) {
@@ -192,7 +203,7 @@ class VaultViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun opened(s: VaultSession) {
         session = s
-        VaultHolder.session = s
+        VaultHolder.open(getApplication(), s)
         entries = s.entries
         query = ""
         activeCategory = "all"
@@ -212,7 +223,7 @@ class VaultViewModel(app: Application) : AndroidViewModel(app) {
         dialogError = null
         pendingRestore = null
         message = if (auto) Txt.AUTO_LOCKED else null
-        VaultHolder.session = null
+        VaultHolder.lock()
         clearClipboardNow()
         viewModelScope.launch {
             mutex.withLock {
@@ -551,8 +562,7 @@ class VaultViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     override fun onCleared() {
-        VaultHolder.session = null
-        session?.lock()
+        // הכספת נשארת פתוחה (בזיכרון) למילוי האוטומטי עד שהזמן שנבחר עובר
         session = null
         super.onCleared()
     }

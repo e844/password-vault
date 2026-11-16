@@ -66,7 +66,7 @@ import kotlinx.coroutines.withContext
 
 /**
  * נפתח מתוך המילוי האוטומטי: סיסמת מאסטר (אם הכספת נעולה) ← בחירת רשומה ← מילוי הטופס.
- * אם הכספת נפתחה רק בשביל המילוי – היא ננעלת מיד אחרי הבחירה.
+ * אחרי פתיחה הכספת נשארת פתוחה לפי "נעילה אוטומטית" (משותף עם האפליקציה), כדי שלא תצטרך להזין סיסמה בכל מילוי.
  */
 class AutofillAuthActivity : ComponentActivity() {
 
@@ -94,7 +94,7 @@ class AutofillAuthActivity : ComponentActivity() {
             webDomain = intent.getStringExtra(EXTRA_WEB_DOMAIN),
             packageName = intent.getStringExtra(EXTRA_PACKAGE) ?: "",
         )
-        val open = VaultHolder.session?.takeIf { !it.isLocked }
+        val open = VaultHolder.current(this)
         if (open != null) entriesForThisFill = open.entries
 
         setContent {
@@ -114,15 +114,14 @@ class AutofillAuthActivity : ComponentActivity() {
         }
     }
 
-    /** פותח את הכספת רק לצורך המילוי הזה, שומר עותק של הרשומות ונועל מיד. */
+    /** פותח את הכספת. היא נשארת פתוחה לפי "נעילה אוטומטית", כדי שלא תצטרך להזין סיסמה בכל מילוי. */
     private suspend fun unlockOnce(password: String): String? {
         val chars = password.toCharArray()
         return try {
             val list = withContext(Dispatchers.Default) {
                 val s = VaultHolder.store(this@AutofillAuthActivity).unlock(chars)
-                val e = s.entries
-                s.lock()
-                e
+                VaultHolder.open(this@AutofillAuthActivity, s)
+                s.entries
             }
             entriesForThisFill = list
             null
@@ -136,6 +135,7 @@ class AutofillAuthActivity : ComponentActivity() {
     }
 
     private fun finishWith(e: VaultEntry, fields: LoginFields) {
+        VaultHolder.touch()
         val dataset = VaultAutofillService.datasetFor(this, e, fields)
         setResult(Activity.RESULT_OK, Intent().putExtra(AutofillManager.EXTRA_AUTHENTICATION_RESULT, dataset))
         entriesForThisFill = emptyList()

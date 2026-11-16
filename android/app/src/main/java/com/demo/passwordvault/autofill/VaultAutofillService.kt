@@ -48,7 +48,8 @@ class VaultAutofillService : AutofillService() {
         if (fields == null || fields.packageName == packageName) { callback.onSuccess(null); return }
 
         val response = FillResponse.Builder()
-        val session = VaultHolder.session
+        val session = VaultHolder.current(this)
+        if (session != null) VaultHolder.touch()
         val exact = if (session != null && !session.isLocked && VaultHolder.autofillOnLoad(this)) {
             AutofillMatch.exactForPage(session.entries, fields.webDomain)
         } else emptyList()
