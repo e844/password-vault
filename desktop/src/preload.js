@@ -31,5 +31,7 @@ contextBridge.exposeInMainWorld('vault', {
   checkUpdate: () => ipcRenderer.invoke('checkUpdate'),
   openUpdate: (kind) => ipcRenderer.invoke('openUpdate', kind),
   activity: () => ipcRenderer.send('activity'),
+  onEntriesChanged: (cb) => ipcRenderer.on('entriesChanged', (_e, info) => cb(info)),
+  onUnlockedElsewhere: (cb) => ipcRenderer.on('unlockedElsewhere', () => cb()),
   onLocked: (cb) => ipcRenderer.on('locked', (_e, info) => cb(info)),
 });

@@ -2,6 +2,11 @@
 const $ = (id) => document.getElementById(id);
 const ask = (msg) => new Promise((resolve) => chrome.runtime.sendMessage(msg, (r) => { void chrome.runtime.lastError; resolve(r || { error: 'noHost' }); }));
 
+$('open-tab').addEventListener('click', async () => {
+  await chrome.tabs.create({ url: chrome.runtime.getURL('vault/index.html') });
+  window.close();
+});
+
 (async () => {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   const url = tab && tab.url ? tab.url : '';

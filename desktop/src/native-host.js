@@ -36,7 +36,7 @@ function askApp(msg) {
     const c = net.connect(pipePath(dir));
     let buf = '';
     c.setEncoding('utf8');
-    c.setTimeout(8000, () => { c.destroy(); resolve({ error: 'timeout' }); });
+    c.setTimeout(msg.type === 'ipc' ? 300_000 : 8000, () => { c.destroy(); resolve({ error: 'timeout' }); });
     c.on('connect', () => c.write(JSON.stringify({ ...msg, token }) + '\n'));
     c.on('data', (d) => { buf += d; });
     c.on('end', () => { try { resolve(JSON.parse(buf)); } catch { resolve({ error: 'bad' }); } });
@@ -61,14 +61,15 @@ process.stdin.on('data', async (chunk) => {
   input = Buffer.concat([input, chunk]);
   while (input.length >= 4) {
     const len = input.readUInt32LE(0);
-    if (len > 1024 * 1024) process.exit(1);
+    if (len > 4 * 1024 * 1024) process.exit(1);
     if (input.length < 4 + len) return;
     let msg;
     try { msg = JSON.parse(input.subarray(4, 4 + len).toString('utf8')); } catch { msg = null; }
     input = input.subarray(4 + len);
     if (!msg || typeof msg.type !== 'string') { send({ error: 'bad' }); continue; }
     pending++;
-    let reply = await askApp({ type: msg.type, url: msg.url, id: msg.id });
+    // מעבירים רק שדות ידועים. הסיסמה עוברת בזיכרון בלבד (stdin → צינור מקומי) ולא נכתבת לשום מקום.
+    let reply = await askApp({ type: msg.type, url: msg.url, id: msg.id, username: msg.username, password: msg.password, channel: msg.channel, args: msg.args });
     if (reply.error === 'notRunning' && msg.type === 'focus') reply = launchApp() ? { ok: true, launched: true } : reply;
     send(reply);
     pending--;

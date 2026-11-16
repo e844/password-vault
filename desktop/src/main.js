@@ -145,7 +145,31 @@ function requireVault() {
 }
 
 // ---------- IPC ----------
+// כל הפעולות של הממשק – גם לחלון התוכנה וגם ללשונית בדפדפן (דרך הגשר המקומי)
+const ipcHandlers = Object.create(null);
+let rev = 0; // מונה שינויים – כדי שלשונית בדפדפן תדע לרענן
+
+const MUTATING = new Set(['save', 'delete', 'importCsv', 'restoreApply']);
+
+async function callIpc(name, args) {
+  const fn = ipcHandlers[name];
+  if (!fn) return { error: 'unknown' };
+  let r;
+  try {
+    r = await fn(...(Array.isArray(args) ? args : []));
+  } catch (e) {
+    return { error: e && e.message === 'locked' ? 'locked' : 'generic' };
+  }
+  // שינוי שנעשה בלשונית בדפדפן – מעדכנים גם את חלון התוכנה
+  if (r && r.ok && win) {
+    if (MUTATING.has(name)) win.webContents.send('entriesChanged', { source: 'tab' });
+    if (name === 'unlock' || name === 'create') win.webContents.send('unlockedElsewhere');
+  }
+  return r;
+}
+
 function handle(name, fn) {
+  ipcHandlers[name] = fn;
   ipcMain.handle(name, async (event, ...args) => {
     if (!win || event.sender !== win.webContents) return { error: 'forbidden' };
     try {
@@ -159,6 +183,7 @@ function handle(name, fn) {
 handle('state', () => ({
   exists: store.exists(),
   unlocked: !!vault,
+  rev,
   accent: process.platform === 'win32' || process.platform === 'darwin' ? safeAccent() : null,
 }));
 
@@ -223,6 +248,7 @@ handle('save', (entry) => {
   const exists = clean.id && vault.entries.some((x) => x.id === clean.id);
   const next = exists ? V.updateEntry(vault.entries, clean) : V.addEntry(vault.entries, { ...clean, id: undefined });
   vault.save(next);
+  rev++;
   const saved = exists ? next.find((x) => x.id === clean.id) : next.at(-1);
   return { ok: true, id: saved.id, entries: list() };
 });
@@ -230,6 +256,7 @@ handle('save', (entry) => {
 handle('delete', (id) => {
   requireVault();
   vault.save(V.deleteEntry(vault.entries, id));
+  rev++;
   return { ok: true, entries: list() };
 });
 
@@ -287,7 +314,7 @@ handle('importCsv', async () => {
   let parsed;
   try { parsed = C.entriesFromCsv(fs.readFileSync(file, 'utf8')); } catch { return { error: 'csvFormat' }; }
   const r = V.importEntries(vault.entries, parsed.entries);
-  if (r.added) vault.save(r.entries);
+  if (r.added) { vault.save(r.entries); rev++; }
   return { ok: true, added: r.added, duplicates: r.duplicates, skipped: parsed.skipped, entries: list() };
 });
 
@@ -318,6 +345,7 @@ handle('restoreApply', async (password) => {
     const incoming = await V.readBackup(pendingRestore, Buffer.from(String(password || ''), 'utf8'));
     const r = V.mergeEntries(vault.entries, incoming);
     vault.save(r.entries);
+    rev++;
     pendingRestore = null;
     return { ok: true, added: r.added, updated: r.updated, entries: list() };
   } catch (e) {
@@ -380,6 +408,8 @@ handle('changeMaster', async (current, next, confirm) => {
   } finally { busy = false; }
 });
 
+handle('activityPing', () => { if (vault) policy.onInteraction(now()); return { ok: true }; });
+
 ipcMain.on('activity', (event) => {
   if (win && event.sender === win.webContents && vault) policy.onInteraction(now());
 });
@@ -401,6 +431,12 @@ app.whenReady().then(() => {
     getVault: () => vault,
     focusWindow: () => showWindow(),
     onFilled: () => policy.onInteraction(now()),
+    onChanged: () => {
+      rev++;
+      policy.onInteraction(now());
+      if (win) win.webContents.send('entriesChanged', { source: 'browser' });
+    },
+    ipc: callIpc,
   });
   try {
     const extra = process.env.PV_TEST_NM_DIR ? process.env.PV_TEST_NM_DIR.split(path.delimiter) : [];

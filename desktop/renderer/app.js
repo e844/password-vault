@@ -719,6 +719,16 @@
   };
   ['mousemove', 'mousedown', 'keydown', 'wheel', 'touchstart'].forEach((ev) => window.addEventListener(ev, ping, { passive: true }));
 
+  // רשומה נשמרה/עודכנה מהדפדפן (אחרי אישור המשתמש בתוסף)
+  api.onEntriesChanged(async (info) => {
+    if ($('main-view').hidden) return;
+    const r = await api.list();
+    if (!r.entries) return;
+    entries = r.entries;
+    renderAll();
+    if (info && info.source === 'browser') snack('נשמר מהדפדפן');
+  });
+
   api.onLocked((info) => {
     showLock('unlock');
     if (info && info.auto) snack(T.autoLocked);
@@ -733,8 +743,21 @@
   });
 
   // ---------- התחלה ----------
-  api.state().then((s) => {
+  // הכספת נפתחה במקום אחר (בחלון התוכנה או בלשונית בדפדפן) – מציגים את הרשימה גם כאן
+  if (api.onUnlockedElsewhere) {
+    api.onUnlockedElsewhere(async () => {
+      if ($('lock-view').hidden) return;
+      const r = await api.list();
+      if (r.entries) showMain(r.entries);
+    });
+  }
+
+  api.state().then(async (s) => {
     applyAccent(s.accent);
+    if (s.unlocked) {
+      const r = await api.list();
+      if (r.entries) { showMain(r.entries); return; }
+    }
     showLock(s.exists ? 'unlock' : 'setup');
   });
 })();

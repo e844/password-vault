@@ -419,3 +419,5 @@ input[type="range"] { width: 100%; accent-color: var(--primary); margin: 0 0 10p
   .brand { padding: 4px 0 14px; }
   .nav-item { width: 52px; justify-content: center; padding: 0; }
 }
+.cat-chip { white-space: nowrap; }
+.detail-head .detail-titles { min-width: 0; }

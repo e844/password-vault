@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "כספת סיסמאות – מילוי אוטומטי",
   "short_name": "כספת סיסמאות",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "ממלא שם משתמש וסיסמה מתוך תוכנת כספת הסיסמאות במחשב. בלי אינטרנט, רק באתר שהכתובת שלו תואמת לרשומה.",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqxXiZrP/31DCzwnmyybQnlFi88l9FbWYVXYKfZTmyzNQS2wsF+p045RZQrt9d5Mbh9/JHdto1BalZ5O+YxlhTlB6DToVPwB6xKx9p5rOGwNw7o2RGb5Q3/KlwZf4kYua8pyM5NgftB5L2EuqhfOabRFWsloTHjYWahaY4F4IsAnnwE6SWZbYwYoczYyHGo4E43NHUsT8z7AKbBdncCh4wzjI0u8I/6S/fNkyS9SXpcvVAQYVFDUgLKSQucNKzxqnbOlA9y228OYH+ckuddXGjX4NgrhyByXnZHO+jc0CgvZwRTStkUHIrfdken107xPpTVIVI13rC+/D/NUiJI0EdwIDAQAB",
   "minimum_chrome_version": "110",

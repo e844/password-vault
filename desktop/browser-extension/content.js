@@ -114,7 +114,8 @@
 
   async function offer(anchor) {
     const r = await ask({ type: 'query' });
-    if (document.activeElement !== anchor) return;
+    // השדה כבר לא בפוקוס, או שהמשתמש כבר התחיל להקליד – לא מכסים לו את הטופס
+    if (document.activeElement !== anchor || anchor.value) return;
     if (r.error === 'noHost') { show(anchor, (box) => note(box, T.noHost)); return; }
     if (r.error === 'notRunning' || r.error === 'timeout') {
       show(anchor, (box) => item(box, T.notRunning, '', async () => { await ask({ type: 'focus' }); show(anchor, (b) => note(b, T.opening)); }));
@@ -146,7 +147,140 @@
   }, true);
   document.addEventListener('mousedown', (e) => { if (host && !host.contains(e.target) && e.target !== current) close(); }, true);
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); }, true);
+  document.addEventListener('input', (e) => { if (host && e.target === current) close(); }, true);
   window.addEventListener('resize', close);
+
+  // ================= הצעה לשמור פרטי כניסה חדשים =================
+  // הסיסמה נשלחת לתוסף רק כשהטופס נשלח, והתוכנה שומרת רק אחרי לחיצה על "שמור" / "עדכן".
+  const S = {
+    saveTitle: 'לשמור בכספת?',
+    updateTitle: 'לעדכן את הסיסמה בכספת?',
+    save: 'שמור',
+    update: 'עדכן',
+    notNow: 'לא עכשיו',
+    locked: 'הכספת נעולה. פתח אותה בתוכנה ואז לחץ שוב.',
+    openApp: 'פתח את התוכנה',
+    saved: '✓ נשמר בכספת',
+    updated: '✓ הסיסמה עודכנה בכספת',
+    error: 'השמירה נכשלה. ודא שתוכנת הכספת פתוחה.',
+  };
+
+  function captureFrom(scope) {
+    const pws = [...scope.querySelectorAll('input[type=password]')].filter((p) => p.value);
+    if (!pws.length) return null;
+    let password = pws[0].value;
+    // הרשמה / החלפת סיסמה: שני השדות האחרונים זהים → זו הסיסמה החדשה
+    if (pws.length >= 2 && pws[pws.length - 1].value === pws[pws.length - 2].value) password = pws[pws.length - 1].value;
+    const user = usernameFor(pws[0]);
+    return { username: user ? user.value.trim() : '', password };
+  }
+
+  let lastSent = '';
+  let lastAt = 0;
+  function onSubmitLike(scope) {
+    const c = captureFrom(scope || document);
+    if (!c) return;
+    const key = `${c.username}\u0000${c.password}`;
+    if (key === lastSent && Date.now() - lastAt < 4000) return; // אותה שליחה פעמיים (לחיצה + submit)
+    lastSent = key; lastAt = Date.now();
+    ask({ type: 'captured', username: c.username, password: c.password }).then((r) => { if (r && r.show) showSavePrompt(r); });
+    c.password = '';
+  }
+
+  document.addEventListener('submit', (e) => { if (e.target instanceof HTMLFormElement) onSubmitLike(e.target); }, true);
+  document.addEventListener('click', (e) => {
+    const b = e.target instanceof Element ? e.target.closest('button, input[type=submit], input[type=button], [role=button]') : null;
+    if (!b) return;
+    const scope = b.form || b.closest('form') || document;
+    if (scope.querySelector && scope.querySelector('input[type=password]')) setTimeout(() => onSubmitLike(scope), 0);
+  }, true);
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' || !(e.target instanceof HTMLInputElement)) return;
+    const scope = e.target.form || document;
+    if (scope.querySelector('input[type=password]')) onSubmitLike(scope);
+  }, true);
+
+  let promptHost = null;
+  function closePrompt() { if (promptHost) { promptHost.remove(); promptHost = null; } }
+
+  function showSavePrompt(info) {
+    closePrompt();
+    promptHost = document.createElement('div');
+    promptHost.setAttribute('data-pv-prompt', info.state); // לזיהוי בבדיקות; בלי פרטים אישיים
+    promptHost.style.cssText = 'position:fixed;top:14px;right:14px;z-index:2147483647;';
+    const root = promptHost.attachShadow({ mode: 'closed' });
+    const style = document.createElement('style');
+    style.textContent = `
+      [hidden]{display:none !important}
+      .card{direction:rtl;font:14px/1.45 "Segoe UI",system-ui,sans-serif;width:340px;background:#fff;color:#1a1c20;border-radius:20px;
+        box-shadow:0 4px 10px rgba(0,0,0,.14),0 14px 36px rgba(0,0,0,.16);padding:16px 18px 14px;animation:in .2s cubic-bezier(.2,0,0,1)}
+      @keyframes in{from{opacity:0;transform:translateY(-8px) scale(.98)}to{opacity:1;transform:none}}
+      .top{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+      .top img{width:22px;height:22px}
+      h2{font-size:16px;font-weight:600;margin:0}
+      .who{color:#4a4f59;margin:2px 0 12px;font-size:13.5px}
+      .who b{direction:ltr;unicode-bidi:isolate;font-weight:600;color:#1a1c20}
+      .msg{color:#4a4f59;margin:0 0 10px;font-size:13px}
+      .row{display:flex;gap:8px;justify-content:flex-start}
+      button{all:unset;cursor:pointer;border-radius:999px;padding:8px 18px;font-weight:600;font-size:14px}
+      button:focus-visible{outline:2px solid #3f5f90;outline-offset:2px}
+      .primary{background:#3f5f90;color:#fff}.primary:hover{filter:brightness(1.08)}
+      .text{color:#3f5f90}.text:hover{background:#e8eefc}
+      @media (prefers-color-scheme: dark){.card{background:#23262d;color:#e3e5ea}.who,.msg{color:#a9adb7}.who b{color:#e3e5ea}
+        .primary{background:#a9c7ff;color:#07305f}.text{color:#a9c7ff}.text:hover{background:#30364a}}`;
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.setAttribute('role', 'dialog');
+    const top = document.createElement('div'); top.className = 'top';
+    const img = document.createElement('img'); img.src = chrome.runtime.getURL('icons/32.png'); img.alt = '';
+    const h = document.createElement('h2'); h.textContent = info.state === 'update' ? S.updateTitle : S.saveTitle;
+    top.append(img, h);
+    const who = document.createElement('div'); who.className = 'who';
+    const b = document.createElement('b'); b.textContent = info.username || '(ללא שם משתמש)';
+    who.append(`${info.host} · `, b);
+    const msg = document.createElement('p'); msg.className = 'msg'; msg.hidden = true;
+    const row = document.createElement('div'); row.className = 'row';
+    const primary = document.createElement('button'); primary.className = 'primary';
+    primary.textContent = info.state === 'update' ? S.update : S.save;
+    const later = document.createElement('button'); later.className = 'text'; later.textContent = S.notNow;
+    const openApp = document.createElement('button'); openApp.className = 'text'; openApp.textContent = S.openApp; openApp.hidden = true;
+    row.append(primary, later, openApp);
+    card.append(top, who, msg, row);
+    root.append(style, card);
+    document.documentElement.appendChild(promptHost);
+    primary.focus();
+
+    const done = (text) => {
+      row.hidden = true; msg.hidden = false; msg.textContent = text;
+      promptHost && promptHost.setAttribute('data-pv-prompt', 'done');
+      setTimeout(closePrompt, 2200);
+    };
+    primary.addEventListener('click', async () => {
+      primary.disabled = true;
+      const r = await ask({ type: 'savePending' });
+      primary.disabled = false;
+      if (r.ok) { done(r.action === 'updated' ? S.updated : S.saved); return; }
+      if (r.locked) {
+        msg.hidden = false; msg.textContent = S.locked; openApp.hidden = false;
+        promptHost.setAttribute('data-pv-prompt', 'locked');
+        primary.focus();
+        return;
+      }
+      msg.hidden = false; msg.textContent = S.error;
+    });
+    later.addEventListener('click', () => { ask({ type: 'dismissPending' }); closePrompt(); });
+    openApp.addEventListener('click', () => { ask({ type: 'focus' }); primary.focus(); });
+    card.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.stopPropagation(); later.click(); } });
+  }
+
+  // דף חדש אחרי שליחת הטופס (באותו אתר) – מציגים שוב את ההצעה שממתינה
+  if (window.top === window) {
+    // הבדיקה מול התוכנה עשויה להסתיים רגע אחרי שהדף החדש נטען – מנסים כמה פעמים
+    const tryPending = (n) => ask({ type: 'pendingPrompt' }).then((r) => {
+      if (r && r.show) { if (!promptHost) showSavePrompt(r); } else if (n > 0) setTimeout(() => tryPending(n - 1), 700);
+    });
+    tryPending(4);
+  }
 
   // מילוי שמגיע מחלון התוסף (popup) – רק אם הדף עדיין באותו אתר
   chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {

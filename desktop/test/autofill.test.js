@@ -122,3 +122,58 @@ test('update check: compares build numbers, only repo links allowed', () => {
   assert.equal(U.summarize(evil, 1).download, null);
   assert.equal(U.summarize(evil, 1).page, U.RELEASES_PAGE);
 });
+
+test('save from browser: new, same, update, locked, invalid', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pv-sv-'));
+  const store = new (require('../src/vault').VaultStore)(path.join(dir, 'vault.bin'), { iterations: 1000 });
+  let vault = await store.create(Buffer.from('pw-123456'), [{ ...bank }]);
+  let changed = 0;
+  const b = startBridge(dir, { getVault: () => vault, focusWindow: () => {}, onChanged: () => { changed++; } });
+  await new Promise((r) => setTimeout(r, 100));
+  const site = 'https://hb2.leumi.co.il/login';
+
+  // בדיקה בלבד – לא שומרת
+  assert.deepEqual(await viaHost(dir, { type: 'checkSave', url: site, username: 'u', password: 'BankPass!' }), { ok: true, state: 'same', id: 'b' });
+  assert.deepEqual(await viaHost(dir, { type: 'checkSave', url: site, username: 'U', password: 'NewPass1' }), { ok: true, state: 'update', id: 'b' });
+  assert.deepEqual(await viaHost(dir, { type: 'checkSave', url: site, username: 'other', password: 'x1' }), { ok: true, state: 'new' });
+  assert.equal(vault.entries.length, 1);
+  assert.equal(changed, 0);
+
+  // שמירה (אחרי "שמור")
+  assert.deepEqual(await viaHost(dir, { type: 'save', url: site, username: 'other', password: 'x1' }), { ok: true, action: 'added' });
+  const added = vault.entries.find((e) => e.username === 'other');
+  assert.deepEqual([added.title, added.url, added.password, added.category], ['hb2.leumi.co.il', 'https://hb2.leumi.co.il', 'x1', 'banking']);
+  // עדכון (אחרי "עדכן")
+  assert.deepEqual(await viaHost(dir, { type: 'save', url: site, username: 'u', password: 'NewPass1' }), { ok: true, action: 'updated' });
+  assert.equal(vault.entries.find((e) => e.id === 'b').password, 'NewPass1');
+  // זהה – לא משנה כלום
+  assert.deepEqual(await viaHost(dir, { type: 'save', url: site, username: 'u', password: 'NewPass1' }), { ok: true, action: 'same' });
+  assert.equal(changed, 2);
+  // נשמר באמת בקובץ המוצפן
+  const reopened = await store.unlock(Buffer.from('pw-123456'));
+  assert.equal(reopened.entries.length, 2);
+
+  // אתר אחר עם אותו שם משתמש – רשומה חדשה, לא עדכון של הבנק
+  assert.deepEqual(await viaHost(dir, { type: 'checkSave', url: 'https://evil.example/', username: 'u', password: 'NewPass1' }), { ok: true, state: 'new' });
+  // קלט לא תקין
+  assert.deepEqual(await viaHost(dir, { type: 'save', url: 'file:///x', username: 'u', password: 'p' }), { error: 'bad' });
+  assert.deepEqual(await viaHost(dir, { type: 'save', url: site, username: 'u', password: '' }), { error: 'bad' });
+
+  // כספת נעולה: לא שומר, מבקש לפתוח
+  const live = vault;
+  vault = null;
+  assert.deepEqual(await viaHost(dir, { type: 'checkSave', url: site, username: 'n', password: 'p2' }), { ok: true, state: 'locked' });
+  assert.deepEqual(await viaHost(dir, { type: 'save', url: site, username: 'n', password: 'p2' }), { ok: false, locked: true });
+  vault = live;
+  assert.deepEqual(await viaHost(dir, { type: 'save', url: site, username: 'n', password: 'p2' }), { ok: true, action: 'added' });
+  b.close();
+});
+
+test('browser-tab copy of the UI is up to date (run scripts/sync-extension-ui.js)', () => {
+  const { build, dst } = require('../scripts/sync-extension-ui');
+  for (const [name, content] of Object.entries(build())) {
+    assert.equal(fs.readFileSync(path.join(dst, name), 'utf8'), content, `browser-extension/vault/${name} is stale`);
+  }
+  const html = fs.readFileSync(path.join(dst, 'index.html'), 'utf8');
+  assert.ok(html.indexOf('vault-api.js') < html.indexOf('app.js'));
+});

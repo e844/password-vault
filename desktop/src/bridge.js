@@ -10,6 +10,24 @@ const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const M = require('./match');
+const V = require('./vault');
+const L = require('./logic');
+
+const MAX_USER = 1000;
+const MAX_PASS = 4096;
+
+/** הרשומה הקיימת לאותו אתר ואותו שם משתמש (אם יש). */
+function existingFor(entries, url, username) {
+  const u = String(username || '').trim().toLowerCase();
+  return M.matchesFor(entries, url).find((e) => e.username.trim().toLowerCase() === u) || null;
+}
+
+/** 'new' – אין רשומה; 'update' – יש, והסיסמה שונה; 'same' – כבר שמור בדיוק כך. */
+function saveState(entries, url, username, password) {
+  const e = existingFor(entries, url, username);
+  if (!e) return { state: 'new' };
+  return e.password === password ? { state: 'same', id: e.id } : { state: 'update', id: e.id };
+}
 
 function pipePath(userDataDir) {
   if (process.platform === 'win32') {
@@ -36,8 +54,19 @@ function startBridge(userDataDir, hooks) {
     return b.length === tokenBuf.length && crypto.timingSafeEqual(b, tokenBuf);
   };
 
-  function handle(msg) {
+  function validCredentials(m) {
+    return M.isFillablePage(m.url)
+      && typeof m.password === 'string' && m.password.length > 0 && m.password.length <= MAX_PASS
+      && typeof (m.username ?? '') === 'string' && String(m.username ?? '').length <= MAX_USER;
+  }
+
+  async function handle(msg) {
     if (!msg || !okToken(msg.token)) return { error: 'forbidden' };
+    if (msg.type === 'ipc') {
+      // הממשק המלא בלשונית של התוסף (רק מדף של התוסף עצמו – נבדק ב-background.js)
+      if (!hooks.ipc || typeof msg.channel !== 'string') return { error: 'unknown' };
+      return { ok: true, result: await hooks.ipc(msg.channel, msg.args) };
+    }
     const vault = hooks.getVault();
     switch (msg.type) {
       case 'ping':
@@ -60,6 +89,34 @@ function startBridge(userDataDir, hooks) {
       case 'focus':
         hooks.focusWindow();
         return { ok: true };
+      case 'checkSave': {
+        // רק בדיקה – לא נשמר כלום
+        if (!validCredentials(msg)) return { error: 'bad' };
+        if (!vault) return { ok: true, state: 'locked' };
+        return { ok: true, ...saveState(vault.entries, msg.url, msg.username, msg.password) };
+      }
+      case 'save': {
+        // נשמר רק אחרי שהמשתמש לחץ "שמור" / "עדכן" בהצעה של התוסף
+        if (!validCredentials(msg)) return { error: 'bad' };
+        if (!vault) return { ok: false, locked: true };
+        const st = saveState(vault.entries, msg.url, msg.username, msg.password);
+        if (st.state === 'same') return { ok: true, action: 'same' };
+        let next;
+        if (st.state === 'update') {
+          const e = vault.entries.find((x) => x.id === st.id);
+          next = V.updateEntry(vault.entries, { ...e, password: msg.password });
+        } else {
+          const u = new URL(msg.url);
+          const host = u.hostname.replace(/^www\./, '');
+          next = V.addEntry(vault.entries, {
+            title: host, url: u.origin, username: String(msg.username || '').trim(), password: msg.password,
+            notes: '', category: L.guessCategory(host, u.origin),
+          });
+        }
+        vault.save(next);
+        if (hooks.onChanged) hooks.onChanged();
+        return { ok: true, action: st.state === 'update' ? 'updated' : 'added' };
+      }
       default:
         return { error: 'unknown' };
     }
@@ -68,14 +125,16 @@ function startBridge(userDataDir, hooks) {
   const server = net.createServer((conn) => {
     let buf = '';
     conn.setEncoding('utf8');
-    conn.setTimeout(10_000, () => conn.destroy());
-    conn.on('data', (chunk) => {
+    conn.setTimeout(310_000, () => conn.destroy()); // פעולות עם חלון בחירת קובץ יכולות לקחת זמן
+    let started = false;
+    conn.on('data', async (chunk) => {
       buf += chunk;
-      if (buf.length > 64 * 1024) { conn.destroy(); return; }
+      if (buf.length > 2 * 1024 * 1024) { conn.destroy(); return; }
       const nl = buf.indexOf('\n');
-      if (nl < 0) return;
+      if (nl < 0 || started) return;
+      started = true;
       let reply;
-      try { reply = handle(JSON.parse(buf.slice(0, nl))); } catch { reply = { error: 'bad' }; }
+      try { reply = await handle(JSON.parse(buf.slice(0, nl))); } catch { reply = { error: 'bad' }; }
       conn.end(JSON.stringify(reply) + '\n');
     });
     conn.on('error', () => { /* החיבור נסגר – מתעלמים */ });
@@ -93,4 +152,4 @@ function startBridge(userDataDir, hooks) {
   };
 }
 
-module.exports = { startBridge, pipePath };
+module.exports = { startBridge, pipePath, saveState };

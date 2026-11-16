@@ -1,7 +1,7 @@
 {
   "name": "password-vault-desktop",
   "productName": "PasswordVault",
-  "version": "0.2.0",
+  "version": "0.4.0",
   "description": "כספת סיסמאות – גרסת מחשב (נתוני דוגמה בלבד)",
   "main": "src/main.js",
   "author": "Demo",
@@ -10,7 +10,8 @@
   "scripts": {
     "start": "electron .",
     "test": "node --test test/core.test.js test/features.test.js test/autofill.test.js",
-    "test:e2e": "node test/e2e.mjs"
+    "test:e2e": "node test/e2e.mjs && node test/browser-e2e.mjs && node test/save-e2e.mjs && node test/tab-e2e.mjs",
+    "sync-ui": "node scripts/sync-extension-ui.js"
   },
   "devDependencies": {
     "@electron/packager": "^20.3.0",

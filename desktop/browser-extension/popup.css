@@ -14,3 +14,5 @@ h1 { font-size: 17px; font-weight: 500; margin: 0; }
   .entry { background: #1e2129; } .entry:hover { background: #2a3040; }
   .tonal { background: #254777; color: #d6e3ff; }
 }
+.filled { border: none; border-radius: 999px; padding: 10px 20px; background: #3f5f90; color: #fff; font: inherit; font-weight: 500; cursor: pointer; width: 100%; margin-top: 8px; }
+@media (prefers-color-scheme: dark) { .filled { background: #a9c7ff; color: #07305f; } }
