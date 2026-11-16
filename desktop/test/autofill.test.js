@@ -178,3 +178,34 @@ test('browser-tab copy of the UI is up to date (run scripts/sync-extension-ui.js
   const html = fs.readFileSync(path.join(dst, 'index.html'), 'utf8');
   assert.ok(html.indexOf('vault-api.js') < html.indexOf('app.js'));
 });
+
+// רץ רק ב-Windows (בגיטהאב): תוכנה בתיקייה עם שם בעברית – הדפדפן חייב להצליח להפעיל את החיבור
+test('Windows: native host launcher works from a folder with a Hebrew name', { skip: process.platform !== 'win32' }, async () => {
+  const base = fs.mkdtempSync(path.join(os.tmpdir(), 'pv-heb-'));
+  const appDir = path.join(base, 'שולחן העבודה', 'כספת סיסמאות');
+  const dataDir = path.join(base, 'נתונים של משתמש');
+  fs.mkdirSync(appDir, { recursive: true });
+  const exe = path.join(appDir, 'PasswordVault.exe');
+  fs.copyFileSync(process.execPath, exe); // node.exe בתפקיד התוכנה
+  const { launcher } = registerNativeHost(dataDir, exe, []);
+  const bat = fs.readFileSync(launcher, 'utf8');
+  assert.match(bat, /chcp 65001 >nul/);
+
+  const b = startBridge(dataDir, { getVault: () => ({ entries }), focusWindow: () => {} });
+  await new Promise((r) => setTimeout(r, 150));
+  // כמו שהדפדפן מפעיל: cmd.exe /d /c "<host.bat>" עם צינורות stdin/stdout
+  const reply = await new Promise((resolve, reject) => {
+    const p = spawn('cmd.exe', ['/d', '/s', '/c', `"${launcher}" chrome-extension://${EXTENSION_ID}/`], {
+      windowsVerbatimArguments: true, stdio: ['pipe', 'pipe', 'inherit'],
+    });
+    let out = Buffer.alloc(0);
+    p.stdout.on('data', (d) => { out = Buffer.concat([out, d]); });
+    p.on('exit', () => {
+      if (out.length < 4) { reject(new Error(`no reply; got: ${out.toString()}`)); return; }
+      resolve(JSON.parse(out.subarray(4, 4 + out.readUInt32LE(0)).toString()));
+    });
+    p.stdin.end(frame({ type: 'query', url: 'https://www.leumi.co.il/' }));
+  });
+  assert.deepEqual(reply, { ok: true, locked: false, matches: [{ id: 'b', title: 'בנק', username: 'u' }] });
+  b.close();
+});

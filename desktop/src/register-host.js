@@ -6,7 +6,24 @@
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { execFile } = require('node:child_process');
+const { execFile, execFileSync } = require('node:child_process');
+
+/**
+ * ב-Windows: נתיב "קצר" (8.3) באותיות אנגליות בלבד, למשל C:\Users\X\ONEDRI~1\9C2B~1.
+ * cmd.exe קורא קבצי .bat בקידוד ישן ולא מבין עברית בנתיב – אז עדיף נתיב בלי עברית.
+ * אם אין נתיב קצר (או שמשהו נכשל) – מחזירים את הנתיב המקורי.
+ */
+function shortPath(p) {
+  if (process.platform !== 'win32' || /^[\x20-\x7e]*$/.test(p)) return p;
+  try {
+    const out = execFileSync('cmd.exe', ['/d', '/s', '/c', `"for %I in ("${p}") do @echo %~sI"`], {
+      windowsVerbatimArguments: true, windowsHide: true, encoding: 'utf8', timeout: 5000,
+    }).trim();
+    return /^[\x20-\x7e]+$/.test(out) && out.length > 2 ? out : p;
+  } catch {
+    return p;
+  }
+}
 
 const HOST_NAME = 'com.demo.passwordvault';
 // מזהה קבוע של התוסף (נגזר מהמפתח הציבורי שב-manifest.json של התוסף)
@@ -34,12 +51,15 @@ function registerNativeHost(userDataDir, appExe, extraDirs = []) {
   let launcher;
   if (process.platform === 'win32') {
     launcher = path.join(dir, 'host.bat');
+    const exe = shortPath(appExe);
+    // chcp 65001: גם אם נשארה עברית בנתיב, cmd יקרא את שאר הקובץ כ-UTF-8 (הפלט מושתק – לא מפריע לדפדפן)
     fs.writeFileSync(launcher, [
       '@echo off',
+      'chcp 65001 >nul',
       'set ELECTRON_RUN_AS_NODE=1',
-      `set "PV_BRIDGE_DIR=${userDataDir}"`,
-      `set "PV_APP_EXE=${appExe}"`,
-      `"${appExe}" "${hostJs}" %*`,
+      `set "PV_BRIDGE_DIR=${shortPath(userDataDir)}"`,
+      `set "PV_APP_EXE=${exe}"`,
+      `"${exe}" "${shortPath(hostJs)}" %*`,
       '',
     ].join('\r\n'));
   } else {
@@ -85,4 +105,4 @@ function registerNativeHost(userDataDir, appExe, extraDirs = []) {
   return { manifestPath, launcher };
 }
 
-module.exports = { registerNativeHost, HOST_NAME, EXTENSION_ID };
+module.exports = { registerNativeHost, HOST_NAME, EXTENSION_ID, shortPath };
