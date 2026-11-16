@@ -27,6 +27,11 @@
     web: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z',
     update: 'M21 10.12h-6.78l2.74-2.82c-2.73-2.7-7.15-2.8-9.88-.1a6.875 6.875 0 000 9.79 7.02 7.02 0 009.88 0C18.32 15.65 19 14.08 19 12.1h2c0 1.98-.88 4.55-2.64 6.29-3.51 3.48-9.21 3.48-12.72 0-3.5-3.47-3.53-9.11-.02-12.58a8.987 8.987 0 0112.65 0L21 3v7.12zM12.5 8v4.25l3.5 2.08-.72 1.21L11 13V8h1.5z',
     palette: 'M12 3a9 9 0 000 18c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9 8 9.67 8 10.5 7.33 12 6.5 12zm3-4C8.67 8 8 7.33 8 6.5S8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 5 14.5 5s1.5.67 1.5 1.5S15.33 8 14.5 8zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 9 17.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z',
+    settings: 'M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.488.488 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z',
+    person: 'M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z',
+    eye: 'M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z',
+    eyeOff: 'M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46A11.804 11.804 0 001 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z',
+    notes: 'M3 18h12v-2H3v2zM3 6v2h18V6H3zm0 7h18v-2H3v2z',
     timer: 'M15 1H9v2h6V1zm-4 13h2V8h-2v6zm8.03-6.61l1.42-1.42c-.43-.51-.9-.99-1.41-1.41l-1.42 1.42A8.962 8.962 0 0012 4c-4.97 0-9 4.03-9 9s4.02 9 9 9 9-4.03 9-9c0-2.12-.74-4.07-1.97-5.61zM12 20c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z',
     folder: 'M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z',
     bank: 'M4 10v7h3v-7H4zm6 0v7h3v-7h-3zM2 22h19v-3H2v3zm14-12v7h3v-7h-3zm-4.5-9L2 6v2h19V6l-9.5-5z',
@@ -133,65 +138,6 @@
     document.documentElement.style.setProperty('--s', `${s}%`);
   }
 
-  // ---------- תמונת רקע + צבעים מהתמונה (Material You) ----------
-  let systemAccent = null;
-  function photoAccent(dataUrl) {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.onload = () => {
-        const c = document.createElement('canvas');
-        c.width = 48; c.height = 48;
-        const g = c.getContext('2d', { willReadFrequently: true });
-        g.drawImage(img, 0, 0, 48, 48);
-        const px = g.getImageData(0, 0, 48, 48).data;
-        const buckets = new Array(36).fill(0);
-        const sat = new Array(36).fill(0);
-        for (let i = 0; i < px.length; i += 4) {
-          const r = px[i] / 255, gg = px[i + 1] / 255, b = px[i + 2] / 255;
-          const max = Math.max(r, gg, b), min = Math.min(r, gg, b), d = max - min;
-          const l = (max + min) / 2;
-          if (d < 0.08 || l < 0.12 || l > 0.92) continue;
-          const sv = d / (1 - Math.abs(2 * l - 1));
-          let h;
-          if (max === r) h = ((gg - b) / d) % 6; else if (max === gg) h = (b - r) / d + 2; else h = (r - gg) / d + 4;
-          h = (h * 60 + 360) % 360;
-          const w = sv * (1 - Math.abs(l - 0.5) * 1.6);
-          const k = Math.floor(h / 10);
-          buckets[k] += w; sat[k] += sv * w;
-        }
-        let best = -1, bw = 0;
-        buckets.forEach((w, k) => { if (w > bw) { bw = w; best = k; } });
-        if (best < 0 || bw < 2) { resolve(null); return; }
-        resolve({ h: best * 10 + 5, s: Math.round(Math.min(70, Math.max(35, (sat[best] / bw) * 75))) });
-      };
-      img.onerror = () => resolve(null);
-      img.src = dataUrl;
-    });
-  }
-
-  async function applyAppearance(a) {
-    const root = document.documentElement;
-    document.body.classList.toggle('has-photo', !!a.photo);
-    if (a.photo) root.style.setProperty('--photo', `url("${a.photo}")`); else root.style.removeProperty('--photo');
-    const pv = $('photo-preview');
-    pv.replaceChildren();
-    if (a.photo) { const im = document.createElement('img'); im.src = a.photo; im.alt = ''; pv.appendChild(im); } else {
-      const sp = document.createElement('span'); sp.className = 'muted'; sp.textContent = 'עדיין לא נבחרה תמונה'; pv.appendChild(sp);
-    }
-    $('photo-colors').checked = !!a.colorsFromPhoto;
-    $('photo-colors').disabled = !a.photo;
-    $('photo-remove').disabled = !a.photo;
-    const acc = a.photo && a.colorsFromPhoto ? await photoAccent(a.photo) : null;
-    if (acc) {
-      root.style.setProperty('--h', String(acc.h));
-      root.style.setProperty('--s', `${acc.s}%`);
-    } else {
-      root.style.removeProperty('--h');
-      root.style.removeProperty('--s');
-      applyAccent(systemAccent);
-    }
-  }
-
   // ---------- אפקט אדווה (Material ripple) – רק transform/opacity, כלומר רץ על ה-GPU ----------
   document.addEventListener('pointerdown', (ev) => {
     if (reduceMotion) return;
@@ -260,7 +206,6 @@
   // ---------- יצירה / פתיחה ----------
   function wipeUi() {
     document.querySelectorAll('dialog[open]').forEach((d) => d.close());
-    closeMenu();
     $('entries').replaceChildren();
     $('cats').replaceChildren();
     $('search').value = '';
@@ -356,18 +301,34 @@
     return b;
   }
 
+  function navItem(label, iconName, active, count, hue) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'nav-item cat' + (active ? ' active' : '');
+    b.setAttribute('aria-pressed', String(active));
+    if (hue !== undefined) b.style.setProperty('--ch', String(hue));
+    b.appendChild(makeIcon(iconName));
+    const l = document.createElement('span'); l.className = 'nl'; l.textContent = label;
+    const c = document.createElement('span'); c.className = 'nc'; c.textContent = count;
+    b.append(l, c);
+    return b;
+  }
+
   function renderCats() {
-    const row = $('cats');
-    row.replaceChildren();
-    row.appendChild(chip(T.all, 'all', activeCat === 'all', entries.length, () => setCat('all')));
+    const box = $('cats');
+    box.replaceChildren();
+    const all = navItem(T.all, 'all', activeCat === 'all', entries.length);
+    all.addEventListener('click', () => setCat('all'));
+    box.appendChild(all);
     for (const c of CATEGORIES) {
       const n = entries.filter((e) => e.category === c.key).length;
-      if (!n && activeCat !== c.key) continue; // מציגים רק קטגוריות עם רשומות
-      const b = chip(c.label, c.icon, activeCat === c.key, n, () => setCat(c.key));
+      if (!n && activeCat !== c.key) continue;
+      const b = navItem(c.label, c.icon, activeCat === c.key, n, c.hue);
       b.dataset.cat = c.key;
-      b.style.setProperty('--ch', String(c.hue));
-      row.appendChild(b);
+      b.addEventListener('click', () => setCat(c.key));
+      box.appendChild(b);
     }
+    $('list-title').textContent = activeCat === 'all' ? 'כל הרשומות' : catOf(activeCat).label;
   }
 
   function setCat(key) {
@@ -444,7 +405,9 @@
     setField('f-notes', e.notes);
     $('f-password').hidden = !e.hasPassword;
     $('f-password').querySelector('.value').textContent = '••••••••••';
-    $('reveal').textContent = T.show;
+    setIcon($('reveal'), 'eye');
+    $('reveal').setAttribute('aria-label', 'הצג סיסמה');
+    $('open-url').hidden = !e.url;
     $('detail-strength').hidden = true;
     $('detail-updated').textContent = T.updated(fmtDate(e.updatedAt));
     if (e.hasPassword) {
@@ -454,11 +417,12 @@
 
   $('reveal').addEventListener('click', async () => {
     const value = $('f-password').querySelector('.value');
-    if (revealed) { value.textContent = '••••••••••'; $('reveal').textContent = T.show; revealed = false; return; }
+    if (revealed) { value.textContent = '••••••••••'; setIcon($('reveal'), 'eye'); revealed = false; return; }
     const r = await api.get(selectedId);
     if (!r.entry) return;
     value.textContent = r.entry.password;
-    $('reveal').textContent = T.hide;
+    setIcon($('reveal'), 'eyeOff');
+    $('reveal').setAttribute('aria-label', 'הסתר סיסמה');
     revealed = true;
   });
 
@@ -573,16 +537,15 @@
     });
   });
 
-  // ---------- תפריט ----------
-  function closeMenu() { $('menu').hidden = true; $('menu-btn').setAttribute('aria-expanded', 'false'); }
-  $('menu-btn').addEventListener('click', (ev) => {
-    ev.stopPropagation();
-    const open = $('menu').hidden;
-    $('menu').hidden = !open;
-    $('menu-btn').setAttribute('aria-expanded', String(open));
-    if (open) animateIn($('menu'));
-  });
-  document.addEventListener('click', (ev) => { if (!ev.target.closest('.menu-wrap')) closeMenu(); });
+  // ---------- הגדרות ----------
+  async function openSettings() {
+    const [{ settings }, info] = await Promise.all([api.getSettings(), api.updateInfo()]);
+    $('set-lock-desc').textContent = T.lockLabel(settings.autoLockMinutes);
+    $('set-version').textContent = info.current ? `הגרסה שלך: בנייה ${info.current}` : 'בנייה מקומית';
+    $('settings-dialog').showModal();
+  }
+  $('nav-settings').addEventListener('click', openSettings);
+  $('settings-close').addEventListener('click', () => $('settings-dialog').close());
 
   const ACTIONS = {
     exportCsv: () => askConfirm({
@@ -651,7 +614,6 @@
       }
       $('lock-dialog').showModal();
     },
-    appearance: () => { $('appearance-dialog').showModal(); },
     changeMaster: () => {
       ['m-current', 'm-new', 'm-confirm'].forEach((id) => { $(id).value = ''; });
       $('m-error').textContent = '';
@@ -660,7 +622,7 @@
       $('m-current').focus();
     },
   };
-  document.querySelectorAll('#menu [data-action]').forEach((b) => b.addEventListener('click', () => { closeMenu(); ACTIONS[b.dataset.action](); }));
+  document.querySelectorAll('#settings [data-action]').forEach((b) => b.addEventListener('click', () => { $('settings-dialog').close(); ACTIONS[b.dataset.action](); }));
 
   $('restore-cancel').addEventListener('click', () => $('restore-dialog').close());
   $('restore-dialog').addEventListener('close', () => { $('restore-password').value = ''; });
@@ -764,36 +726,15 @@
 
   document.addEventListener('keydown', (ev) => {
     const inMain = !$('main-view').hidden;
-    if (ev.key === 'Escape' && inMain && !$('menu').hidden) { closeMenu(); return; }
     if (ev.key === 'Escape' && inMain && !document.querySelector('dialog[open]') && selectedId) select(null);
     if (ev.ctrlKey && ev.key.toLowerCase() === 'l' && inMain) api.lock();
     if (ev.ctrlKey && ev.key.toLowerCase() === 'f' && inMain) { ev.preventDefault(); $('search').focus(); }
     if (ev.ctrlKey && ev.key.toLowerCase() === 'n' && inMain && !document.querySelector('dialog[open]')) { ev.preventDefault(); openEditor(null); }
   });
 
-  // ---------- התאמה אישית ----------
-  $('appearance-close').addEventListener('click', () => $('appearance-dialog').close());
-  $('photo-pick').addEventListener('click', async () => {
-    const r = await api.appearancePick();
-    if (r.canceled) return;
-    if (!r.ok) { snack(r.error === 'notImage' ? 'הקובץ אינו תמונה שאפשר לפתוח' : errText(r), true); return; }
-    await applyAppearance(r);
-    snack('התמונה נשמרה');
-  });
-  $('photo-remove').addEventListener('click', async () => { applyAppearance(await api.appearanceRemove()); snack('התמונה הוסרה'); });
-  $('photo-colors').addEventListener('change', async () => applyAppearance(await api.appearanceColors($('photo-colors').checked)));
-
-  function greeting() {
-    const h = new Date().getHours();
-    return h < 5 ? 'לילה טוב' : h < 12 ? 'בוקר טוב' : h < 17 ? 'צהריים טובים' : h < 21 ? 'ערב טוב' : 'לילה טוב';
-  }
-
   // ---------- התחלה ----------
-  api.state().then(async (s) => {
-    systemAccent = s.accent;
+  api.state().then((s) => {
     applyAccent(s.accent);
-    $('hero-sub').textContent = greeting();
-    await applyAppearance(await api.appearanceGet());
     showLock(s.exists ? 'unlock' : 'setup');
   });
 })();

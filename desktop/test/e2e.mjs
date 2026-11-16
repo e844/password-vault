@@ -46,8 +46,9 @@ async function unlock(page, pw) {
   await page.waitForSelector('#main-view:not([hidden])');
 }
 async function menu(page, action) {
-  await page.click('#menu-btn');
-  await page.click(`#menu [data-action="${action}"]`);
+  await page.click('#nav-settings');
+  await page.waitForSelector('#settings-dialog[open]');
+  await page.click(`#settings [data-action="${action}"]`);
 }
 
 let { app, page } = await launch();
@@ -104,12 +105,12 @@ await step('search filters entries', async () => {
 });
 
 await step('category chips filter the list', async () => {
-  const chips = await page.locator('#cats .chip').count();
+  const chips = await page.locator('#cats .nav-item').count();
   assert.equal(chips, 1 + SAMPLE_COUNT); // "הכול" + קטגוריה לכל רשומת דוגמה
-  await page.click('#cats .chip[data-cat="banking"]');
+  await page.click('#cats .nav-item[data-cat="banking"]');
   await waitCount(page, 1);
   assert.match(await page.textContent('#entries .entry .t'), /בנק/);
-  await page.click('#cats .chip >> nth=0');
+  await page.click('#cats .nav-item >> nth=0');
   await waitCount(page, SAMPLE_COUNT);
 });
 
@@ -125,12 +126,12 @@ await step('detail view: category, hidden password, reveal', async () => {
 });
 
 await step('open website in default browser', async () => {
-  await page.click('#cats .chip[data-cat="banking"]');
+  await page.click('#cats .nav-item[data-cat="banking"]');
   await page.click('#entries .entry >> nth=0');
   await page.click('#open-url');
   await snackHas(page, 'נפתח');
   assert.equal(await app.evaluate(() => globalThis.pvLastExternalUrl), 'https://demo-bank.example/');
-  await page.click('#cats .chip >> nth=0');
+  await page.click('#cats .nav-item >> nth=0');
 });
 
 await step('copy password to clipboard', async () => {
@@ -158,9 +159,9 @@ await step('add entry with category and generated password', async () => {
   await waitCount(page, SAMPLE_COUNT + 1);
   assert.equal(await page.textContent('#detail-title'), 'רשומת בדיקה');
   assert.match(await page.textContent('#detail-cat'), /עבודה/);
-  await page.click('#cats .chip[data-cat="work"]');
+  await page.click('#cats .nav-item[data-cat="work"]');
   await waitCount(page, 2);
-  await page.click('#cats .chip >> nth=0');
+  await page.click('#cats .nav-item >> nth=0');
 });
 
 await step('title is required', async () => {
@@ -229,9 +230,9 @@ await step('import CSV from Chrome (duplicates skipped, category guessed)', asyn
   await menu(page, 'importCsv');
   await snackHas(page, 'נוספו 2');
   await waitCount(page, SAMPLE_COUNT + 3);
-  await page.click('#cats .chip[data-cat="entertainment"]');
+  await page.click('#cats .nav-item[data-cat="entertainment"]');
   await waitCount(page, 2);
-  await page.click('#cats .chip >> nth=0');
+  await page.click('#cats .nav-item >> nth=0');
 });
 
 await step('generator option: digits only', async () => {
@@ -279,20 +280,6 @@ await step('browser autofill setup dialog', async () => {
   await page.click('#browser-close');
 });
 
-await step('personal background photo + colors from photo', async () => {
-  fs.copyFileSync('/tmp/sample-photo.jpg', openFile);
-  const before = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--h').trim());
-  await menu(page, 'appearance');
-  await page.waitForSelector('#appearance-dialog[open]');
-  await page.click('#photo-pick');
-  await snackHas(page, 'התמונה נשמרה');
-  assert.ok(fs.existsSync(path.join(userData, 'appearance', 'background.jpg')));
-  assert.equal(await page.evaluate(() => document.body.classList.contains('has-photo')), true);
-  await page.waitForFunction((b) => getComputedStyle(document.documentElement).getPropertyValue('--h').trim() !== b, before);
-  await page.click('#appearance-close');
-  await shot(page, '10-photo-main.png');
-});
-
 await step('change master password', async () => {
   await menu(page, 'changeMaster');
   await page.fill('#m-current', 'not-it');
@@ -312,7 +299,7 @@ await step('manual lock clears the screen and clipboard', async () => {
   assert.equal(await page.locator('#entries .entry').count(), 0);
   await page.waitForTimeout(500);
   assert.equal(await app.evaluate(async ({ clipboard }) => await clipboard.readText()), '');
-  await shot(page, '7-locked.png'); // עם תמונת הרקע
+  await shot(page, '7-locked.png');
 });
 
 await step('old master password no longer works', async () => {

@@ -39,40 +39,29 @@
 
   <!-- ===== מסך ראשי ===== -->
   <div id="main-view" class="view" hidden>
-    <header class="app-bar">
-      <div class="hero-text"><h1>כספת סיסמאות</h1><span id="hero-sub"></span></div>
+    <!-- סרגל צד: קטגוריות, מחולל, הגדרות, נעילה -->
+    <nav class="rail" aria-label="ניווט">
+      <div class="brand"><span class="brand-badge" data-icon="lock"></span><b>כספת סיסמאות</b></div>
+      <div class="rail-label">קטגוריות</div>
+      <div id="cats" class="nav-list" role="tablist" aria-label="קטגוריות"></div>
       <div class="spacer"></div>
-      <button id="open-generator" class="tonal-btn"><span data-icon="key"></span>מחולל סיסמאות</button>
-      <button id="lock-btn" class="icon-btn" title="נעילה (Ctrl+L)" aria-label="נעילה"><span data-icon="lock"></span></button>
-      <div class="menu-wrap">
-        <button id="menu-btn" class="icon-btn" title="עוד" aria-label="עוד" aria-haspopup="menu"><span data-icon="more"></span></button>
-        <div id="menu" class="menu" role="menu" hidden>
-          <button role="menuitem" data-action="browserFill"><span data-icon="web"></span>מילוי אוטומטי בדפדפן</button>
-          <hr>
-          <button role="menuitem" data-action="importCsv"><span data-icon="upload"></span>ייבוא מהדפדפן (CSV)</button>
-          <button role="menuitem" data-action="exportCsv"><span data-icon="download"></span>ייצוא לדפדפן (CSV)</button>
-          <hr>
-          <button role="menuitem" data-action="backup"><span data-icon="save"></span>גיבוי מוצפן</button>
-          <button role="menuitem" data-action="restore"><span data-icon="restore"></span>שחזור מגיבוי</button>
-          <hr>
-          <button role="menuitem" data-action="appearance"><span data-icon="palette"></span>התאמה אישית ותמונה</button>
-          <button role="menuitem" data-action="lockSettings"><span data-icon="timer"></span>נעילה אוטומטית</button>
-          <button role="menuitem" data-action="changeMaster"><span data-icon="key"></span>החלפת סיסמת מאסטר</button>
-          <hr>
-          <button role="menuitem" data-action="update"><span data-icon="update"></span>בדיקת עדכונים</button>
-        </div>
-      </div>
-    </header>
+      <button id="open-generator" class="nav-item"><span data-icon="key"></span><span class="nl">מחולל סיסמאות</span></button>
+      <button id="nav-settings" class="nav-item"><span data-icon="settings"></span><span class="nl">הגדרות</span></button>
+      <button id="lock-btn" class="nav-item" title="נעילה (Ctrl+L)"><span data-icon="lock"></span><span class="nl">נעילה</span></button>
+    </nav>
     <div class="panes">
       <section class="list-pane">
+        <div class="list-head">
+          <h1 id="list-title">כל הרשומות</h1>
+          <span id="count" class="muted"></span>
+        </div>
         <div class="search">
           <span data-icon="search"></span>
-          <input id="search" type="search" placeholder="חיפוש רשומות (Ctrl+F)" autocomplete="off" spellcheck="false">
+          <input id="search" type="search" placeholder="חיפוש (Ctrl+F)" autocomplete="off" spellcheck="false">
         </div>
-        <div id="cats" class="chip-row" role="tablist" aria-label="קטגוריות"></div>
-        <div class="list-meta"><span id="count" class="muted"></span></div>
         <ul id="entries" class="entries"></ul>
         <p id="empty" class="muted empty" hidden></p>
+        <button id="fab" class="fab"><span data-icon="add"></span>רשומה חדשה</button>
       </section>
       <section class="detail-pane" id="detail-pane">
         <div id="detail-empty" class="detail-empty">
@@ -88,32 +77,37 @@
               <span id="detail-cat" class="cat-chip"></span>
             </div>
             <div class="spacer"></div>
+            <button id="open-url" class="tonal-btn"><span data-icon="open"></span>פתח את האתר</button>
             <button id="detail-edit" class="icon-btn" title="עריכה" aria-label="עריכה"><span data-icon="edit"></span></button>
             <button id="detail-delete" class="icon-btn" title="מחיקה" aria-label="מחיקה"><span data-icon="delete"></span></button>
           </div>
-          <div class="field-card" id="f-username">
-            <div class="fc-text"><label>שם משתמש</label><div class="value" dir="ltr"></div></div>
-            <button class="text-btn" data-copy="username"><span data-icon="copy"></span>העתק</button>
-          </div>
-          <div class="field-card" id="f-password">
-            <div class="fc-text"><label>סיסמה</label><div class="value mono" dir="ltr">••••••••••</div></div>
-            <button class="text-btn" id="reveal">הצג</button>
-            <button class="text-btn" data-copy="password"><span data-icon="copy"></span>העתק</button>
-          </div>
-          <div id="detail-strength" class="strength" hidden><div class="bar"><i></i></div><small></small></div>
-          <div class="field-card" id="f-url">
-            <div class="fc-text"><label>כתובת אתר</label><div class="value" dir="ltr"></div></div>
-            <button class="text-btn" id="open-url"><span data-icon="open"></span>פתח בדפדפן</button>
-            <button class="text-btn" data-copy="url"><span data-icon="copy"></span>העתק</button>
-          </div>
-          <div class="field-card" id="f-notes">
-            <div class="fc-text"><label>הערות</label><div class="value notes"></div></div>
+          <div class="fields">
+            <div class="frow" id="f-username">
+              <span class="fi" data-icon="person"></span>
+              <div class="fc-text"><label>שם משתמש</label><div class="value" dir="ltr"></div></div>
+              <button class="icon-btn" data-copy="username" title="העתקת שם המשתמש" aria-label="העתקת שם המשתמש"><span data-icon="copy"></span></button>
+            </div>
+            <div class="frow" id="f-password">
+              <span class="fi" data-icon="key"></span>
+              <div class="fc-text"><label>סיסמה</label><div class="value mono" dir="ltr">••••••••••</div>
+                <div id="detail-strength" class="strength mini" hidden><div class="bar"><i></i></div><small></small></div></div>
+              <button class="icon-btn" id="reveal" title="הצג/הסתר" aria-label="הצג סיסמה"><span data-icon="eye"></span></button>
+              <button class="icon-btn" data-copy="password" title="העתקת הסיסמה" aria-label="העתקת הסיסמה"><span data-icon="copy"></span></button>
+            </div>
+            <div class="frow" id="f-url">
+              <span class="fi" data-icon="web"></span>
+              <div class="fc-text"><label>כתובת אתר</label><div class="value" dir="ltr"></div></div>
+              <button class="icon-btn" data-copy="url" title="העתקת הכתובת" aria-label="העתקת הכתובת"><span data-icon="copy"></span></button>
+            </div>
+            <div class="frow" id="f-notes">
+              <span class="fi" data-icon="notes"></span>
+              <div class="fc-text"><label>הערות</label><div class="value notes"></div></div>
+            </div>
           </div>
           <p id="detail-updated" class="muted small-text"></p>
         </article>
       </section>
     </div>
-    <button id="fab" class="fab"><span data-icon="add"></span>הוספה</button>
   </div>
 
   <!-- ===== עריכה ===== -->
@@ -222,18 +216,25 @@
     </form>
   </dialog>
 
-  <!-- ===== התאמה אישית ===== -->
-  <dialog id="appearance-dialog">
+  <!-- ===== הגדרות ===== -->
+  <dialog id="settings-dialog" class="settings-dialog">
     <div>
-      <h2>התאמה אישית</h2>
-      <div id="photo-preview" class="photo-preview"><span class="muted">עדיין לא נבחרה תמונה</span></div>
-      <p class="muted small-text">התמונה מופיעה ברקע מסך הפתיחה ובכותרת. היא נשמרת רק במחשב הזה ולא נשלחת לשום מקום. שים לב: מסך הפתיחה גלוי גם כשהכספת נעולה.</p>
-      <label class="switch-row"><span>צבעי האפליקציה לפי התמונה</span><input type="checkbox" class="switch" id="photo-colors"></label>
-      <div class="dialog-actions">
-        <button type="button" class="text-btn" id="appearance-close">סגירה</button>
-        <button type="button" class="outlined-btn" id="photo-remove">הסרת התמונה</button>
-        <button type="button" class="filled-btn" id="photo-pick">בחירת תמונה</button>
+      <h2>הגדרות</h2>
+      <div class="settings" id="settings">
+        <h3>אבטחה</h3>
+        <button class="set-row" data-action="lockSettings"><span data-icon="timer"></span><div><b>נעילה אוטומטית</b><span id="set-lock-desc"></span></div></button>
+        <button class="set-row" data-action="changeMaster"><span data-icon="key"></span><div><b>החלפת סיסמת מאסטר</b><span>הצפנה מחדש של הכספת עם סיסמה חדשה</span></div></button>
+        <h3>גיבוי והעברה</h3>
+        <button class="set-row" data-action="backup"><span data-icon="save"></span><div><b>גיבוי מוצפן</b><span>קובץ שאפשר לשחזר בטלפון או במחשב אחר</span></div></button>
+        <button class="set-row" data-action="restore"><span data-icon="restore"></span><div><b>שחזור מגיבוי</b><span>מיזוג רשומות מקובץ גיבוי</span></div></button>
+        <button class="set-row" data-action="importCsv"><span data-icon="upload"></span><div><b>ייבוא מהדפדפן (CSV)</b><span>Chrome, Edge, Firefox, Bitwarden</span></div></button>
+        <button class="set-row" data-action="exportCsv"><span data-icon="download"></span><div><b>ייצוא לדפדפן (CSV)</b><span>קובץ לא מוצפן – למעבר למנהל סיסמאות אחר</span></div></button>
+        <h3>דפדפן</h3>
+        <button class="set-row" data-action="browserFill"><span data-icon="web"></span><div><b>מילוי אוטומטי בדפדפן</b><span>התקנת התוסף ל-Chrome / Edge / Brave</span></div></button>
+        <h3>אודות</h3>
+        <button class="set-row" data-action="update"><span data-icon="update"></span><div><b>בדיקת עדכונים</b><span id="set-version"></span></div></button>
       </div>
+      <div class="dialog-actions"><button type="button" class="text-btn" id="settings-close">סגירה</button></div>
     </div>
   </dialog>
 

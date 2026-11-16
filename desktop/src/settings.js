@@ -4,12 +4,11 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const AUTO_LOCK_CHOICES = [1, 5, 15, 30, 60, 0]; // דקות; 0 = רק בנעילת המחשב / שינה / סגירה
-const DEFAULTS = { autoLockMinutes: 15, colorsFromPhoto: true };
+const DEFAULTS = { autoLockMinutes: 15 };
 
 function sanitize(raw) {
   const s = { ...DEFAULTS };
   if (raw && AUTO_LOCK_CHOICES.includes(raw.autoLockMinutes)) s.autoLockMinutes = raw.autoLockMinutes;
-  if (raw && typeof raw.colorsFromPhoto === 'boolean') s.colorsFromPhoto = raw.colorsFromPhoto;
   return s;
 }
 

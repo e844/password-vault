@@ -30,10 +30,6 @@ contextBridge.exposeInMainWorld('vault', {
   updateInfo: () => ipcRenderer.invoke('updateInfo'),
   checkUpdate: () => ipcRenderer.invoke('checkUpdate'),
   openUpdate: (kind) => ipcRenderer.invoke('openUpdate', kind),
-  appearanceGet: () => ipcRenderer.invoke('appearanceGet'),
-  appearancePick: () => ipcRenderer.invoke('appearancePick'),
-  appearanceRemove: () => ipcRenderer.invoke('appearanceRemove'),
-  appearanceColors: (on) => ipcRenderer.invoke('appearanceColors', on),
   activity: () => ipcRenderer.send('activity'),
   onLocked: (cb) => ipcRenderer.on('locked', (_e, info) => cb(info)),
 });

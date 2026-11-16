@@ -40,6 +40,10 @@ for (const scheme of ['light', 'dark']) {
     await page.click('#detail-edit');
     await shot(page, `${p}4-edit.png`);
     await page.click('#edit-cancel');
+    await page.click('#nav-settings');
+    await page.waitForSelector('#settings-dialog[open]');
+    await shot(page, `${p}6-settings.png`);
+    await page.click('#settings-close');
     await page.click('#lock-btn');
     await page.waitForSelector('#lock-view:not([hidden])');
     await shot(page, `${p}5-locked.png`);
