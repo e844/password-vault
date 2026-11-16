@@ -221,23 +221,31 @@ test('Windows: native host launcher works from a folder with a Hebrew name', { s
   fs.copyFileSync(process.execPath, exe); // node.exe בתפקיד התוכנה
   const { launcher } = registerNativeHost(dataDir, exe, []);
   const bat = fs.readFileSync(launcher, 'utf8');
-  assert.match(bat, /chcp 65001 >nul/);
+  assert.match(bat, /^[\x00-\x7e]*$/, 'host.bat must be plain ASCII (cmd.exe misreads UTF-8)');
 
   const b = startBridge(dataDir, { getVault: () => ({ entries }), focusWindow: () => {} });
+  try {
   await new Promise((r) => setTimeout(r, 150));
   // כמו שהדפדפן מפעיל: cmd.exe /d /c "<host.bat>" עם צינורות stdin/stdout
   const reply = await new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('timeout')), 15000);
     const p = spawn('cmd.exe', ['/d', '/s', '/c', `"${launcher}" chrome-extension://${EXTENSION_ID}/`], {
       windowsVerbatimArguments: true, stdio: ['pipe', 'pipe', 'inherit'],
     });
     let out = Buffer.alloc(0);
     p.stdout.on('data', (d) => { out = Buffer.concat([out, d]); });
     p.on('exit', () => {
+      clearTimeout(timer);
       if (out.length < 4) { reject(new Error(`no reply; got: ${out.toString()}`)); return; }
       resolve(JSON.parse(out.subarray(4, 4 + out.readUInt32LE(0)).toString()));
     });
     p.stdin.end(frame({ type: 'query', url: 'https://www.leumi.co.il/' }));
   });
   assert.deepEqual(reply, { ok: true, locked: false, autoFill: false, matches: [{ id: 'b', title: 'בנק', username: 'u', exact: false }] });
-  b.close();
+  // הרצה שנייה (התוכנה נפתחת שוב): הקיצור מתעדכן ולא נמחקת שום תיקייה אמיתית
+  registerNativeHost(dataDir, exe, []);
+  assert.ok(fs.existsSync(exe));
+  } finally {
+    b.close();
+  }
 });

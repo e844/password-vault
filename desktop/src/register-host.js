@@ -25,6 +25,34 @@ function shortPath(p) {
   }
 }
 
+/**
+ * ב-Windows: נתיב לתוכנה שכולו אותיות אנגליות, כדי שאפשר יהיה לכתוב אותו ב-host.bat.
+ * יוצר בתיקיית native-host קיצור מסוג junction בשם app שמצביע על תיקיית התוכנה (לא צריך הרשאות מנהל).
+ * אם זה נכשל – נתיב קצר (8.3), ואם גם הוא לא קיים – הנתיב המקורי.
+ */
+function appExeAlias(hostDir, appExe) {
+  const ascii = (x) => /^[\x20-\x7e]*$/.test(x);
+  let real = appExe;
+  try { real = fs.realpathSync(appExe); } catch { /* נשאר כמו שהוא */ }
+  if (ascii(real)) return real;
+  const name = path.basename(real);
+  if (ascii(name)) {
+    const link = path.join(hostDir, 'app');
+    try {
+      let st = null;
+      try { st = fs.lstatSync(link); } catch { /* אין עדיין */ }
+      if (st) {
+        // מוחקים רק קיצור קודם – לעולם לא תיקייה אמיתית עם תוכן
+        if (!st.isSymbolicLink()) throw new Error('not a link');
+        fs.unlinkSync(link);
+      }
+      fs.symlinkSync(path.dirname(real), link, 'junction');
+      if (fs.existsSync(path.join(link, name))) return `%~dp0app\\${name}`;
+    } catch { /* ננסה נתיב קצר */ }
+  }
+  return shortPath(real);
+}
+
 const HOST_NAME = 'com.demo.passwordvault';
 // מזהה קבוע של התוסף (נגזר מהמפתח הציבורי שב-manifest.json של התוסף)
 const EXTENSION_ID = 'nkhmbogejfailleiddedhcgmhbehlggn';
@@ -51,15 +79,15 @@ function registerNativeHost(userDataDir, appExe, extraDirs = []) {
   let launcher;
   if (process.platform === 'win32') {
     launcher = path.join(dir, 'host.bat');
-    const exe = shortPath(appExe);
-    // chcp 65001: גם אם נשארה עברית בנתיב, cmd יקרא את שאר הקובץ כ-UTF-8 (הפלט מושתק – לא מפריע לדפדפן)
+    // cmd.exe קורא קבצי .bat בקידוד ישן, ועם chcp 65001 הוא מתבלבל בתווים מרובי-בתים. לכן הקובץ כולו באנגלית:
+    // %~dp0 = התיקייה של הקובץ עצמו (נפרש בזמן ריצה, גם אם יש בה עברית), ו-app = קיצור (junction) לתיקיית התוכנה.
+    const exeRel = appExeAlias(dir, appExe);
     fs.writeFileSync(launcher, [
       '@echo off',
-      'chcp 65001 >nul',
       'set ELECTRON_RUN_AS_NODE=1',
-      `set "PV_BRIDGE_DIR=${shortPath(userDataDir)}"`,
-      `set "PV_APP_EXE=${exe}"`,
-      `"${exe}" "${shortPath(hostJs)}" %*`,
+      'set "PV_BRIDGE_DIR=%~dp0.."',
+      `set "PV_APP_EXE=${exeRel}"`,
+      '"%PV_APP_EXE%" "%~dp0host.js" %*',
       '',
     ].join('\r\n'));
   } else {
@@ -105,4 +133,4 @@ function registerNativeHost(userDataDir, appExe, extraDirs = []) {
   return { manifestPath, launcher };
 }
 
-module.exports = { registerNativeHost, HOST_NAME, EXTENSION_ID, shortPath };
+module.exports = { registerNativeHost, HOST_NAME, EXTENSION_ID, shortPath, appExeAlias };

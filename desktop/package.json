@@ -9,7 +9,7 @@
   "private": true,
   "scripts": {
     "start": "electron .",
-    "test": "node --test test/core.test.js test/features.test.js test/autofill.test.js",
+    "test": "node --test --test-force-exit --test-timeout=120000 test/core.test.js test/features.test.js test/autofill.test.js",
     "test:e2e": "node test/e2e.mjs && node test/browser-e2e.mjs && node test/save-e2e.mjs && node test/tab-e2e.mjs",
     "sync-ui": "node scripts/sync-extension-ui.js"
   },

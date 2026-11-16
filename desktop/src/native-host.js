@@ -12,7 +12,7 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const { spawn } = require('node:child_process');
 
-const dir = process.env.PV_BRIDGE_DIR;
+const dir = process.env.PV_BRIDGE_DIR ? path.resolve(process.env.PV_BRIDGE_DIR) : ''; // resolve: מגיע מ-host.bat בצורה ...\native-host\..
 
 function pipePath(userDataDir) {
   if (process.platform === 'win32') {
